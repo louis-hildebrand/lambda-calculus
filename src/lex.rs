@@ -233,4 +233,24 @@ mod lex_tests {
 			lex(r#"\s.\z.s(s(z))"#).all()
 		)
 	}
+
+	#[test]
+	fn lex_multiline() -> () {
+		assert_eq!(
+			vec![
+				Token::Lambda,
+				Token::Ident("a".to_owned()),
+				Token::Dot,
+				Token::Lambda,
+				Token::Ident("b".to_owned()),
+				Token::Dot,
+				Token::Ident("a".to_owned()),
+				Token::Lpar,
+				Token::Ident("a".to_owned()),
+				Token::Ident("b".to_owned()),
+				Token::Rpar,
+			],
+			lex("\\a.\\b.\n\ta (a b)").all()
+		);
+	}
 }
