@@ -1,4 +1,4 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, iter::Peekable, str::Chars};
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
@@ -34,9 +34,15 @@ impl TokenStream {
 	}
 }
 
+const IDENT_SPECIAL_CHARS: [char; 27] = [
+	'~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '-', '_', '+', '[', '{', ']', '}', '|', ':',
+	';', '\'', '"', ',', '<', '>', '/', '?',
+];
+
 pub fn lex(code: &str) -> TokenStream {
 	let mut tokens = VecDeque::new();
-	for c in code.chars() {
+	let mut chars = code.chars().peekable();
+	while let Some(c) = chars.next() {
 		match c {
 			'\\' => {
 				tokens.push_back(Token::Lambda);
@@ -50,9 +56,10 @@ pub fn lex(code: &str) -> TokenStream {
 			')' => {
 				tokens.push_back(Token::Rpar);
 			}
-			c if c.is_alphabetic() => {
-				tokens.push_back(Token::Ident(c.to_string()));
+			c if is_ident_char(&c) => {
+				tokens.push_back(lex_ident(c, &mut chars));
 			}
+			c if c.is_whitespace() => {}
 			c => {
 				// TODO: Handle errors better
 				panic!("Invalid char: '{}'", c);
@@ -60,6 +67,24 @@ pub fn lex(code: &str) -> TokenStream {
 		}
 	}
 	TokenStream { tokens: tokens }
+}
+
+fn lex_ident(first: char, chars: &mut Peekable<Chars>) -> Token {
+	let mut s = vec![first];
+	loop {
+		match chars.peek() {
+			Some(&c) if is_ident_char(&c) => {
+				s.push(c);
+				chars.next();
+			}
+			_ => break,
+		}
+	}
+	Token::Ident(s.iter().collect())
+}
+
+fn is_ident_char(c: &char) -> bool {
+	c.is_alphanumeric() || IDENT_SPECIAL_CHARS.contains(&c)
 }
 
 #[cfg(test)]
@@ -72,8 +97,56 @@ mod lex_tests {
 	}
 
 	#[test]
-	fn lex_ident() -> () {
+	fn lex_simple_ident() -> () {
 		assert_eq!(vec![Token::Ident("a".to_owned())], lex("a").all());
+	}
+
+	#[test]
+	fn lex_long_ident() -> () {
+		assert_eq!(
+			vec![Token::Ident("aa".to_owned()), Token::Ident("bb".to_owned())],
+			lex("aa bb").all()
+		);
+	}
+
+	#[test]
+	fn test_all_ident_chars() -> () {
+		assert_eq!(
+			vec![
+				Token::Ident("ab".to_owned()),
+				Token::Ident("CD".to_owned()),
+				Token::Ident("12".to_owned()),
+				Token::Ident("~~".to_owned()),
+				Token::Ident("``".to_owned()),
+				Token::Ident("!!".to_owned()),
+				Token::Ident("@@".to_owned()),
+				Token::Ident("##".to_owned()),
+				Token::Ident("$$".to_owned()),
+				Token::Ident("%%".to_owned()),
+				Token::Ident("^^".to_owned()),
+				Token::Ident("&&".to_owned()),
+				Token::Ident("**".to_owned()),
+				Token::Ident("--".to_owned()),
+				Token::Ident("__".to_owned()),
+				Token::Ident("++".to_owned()),
+				Token::Ident("[[".to_owned()),
+				Token::Ident("{{".to_owned()),
+				Token::Ident("]]".to_owned()),
+				Token::Ident("}}".to_owned()),
+				Token::Ident("||".to_owned()),
+				Token::Ident("::".to_owned()),
+				Token::Ident(";;".to_owned()),
+				Token::Ident("''".to_owned()),
+				Token::Ident("\"\"".to_owned()),
+				Token::Ident(",,".to_owned()),
+				Token::Ident("<<".to_owned()),
+				Token::Ident(">>".to_owned()),
+				Token::Ident("//".to_owned()),
+				Token::Ident("??".to_owned()),
+				Token::Dot,
+			],
+			lex("ab CD 12 ~~ `` !! @@ ## $$ %% ^^ && ** -- __ ++ [[ {{ ]] }} || :: ;; '' \"\" ,, << >> // ?? .").all(),
+		);
 	}
 
 	#[test]
