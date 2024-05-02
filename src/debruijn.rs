@@ -1,6 +1,6 @@
 use crate::parse::Expr;
 
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DBExpr {
 	Fun(Box<DBExpr>),
 	App(Box<DBExpr>, Box<DBExpr>),
@@ -8,7 +8,7 @@ pub enum DBExpr {
 }
 
 /// Converts a term in the "named" form to a term using de Bruijn indices.
-pub fn to_debruijn(expr: Box<Expr>) -> Box<DBExpr> {
+pub fn to_debruijn(expr: &Expr) -> Box<DBExpr> {
 	let mut arg_stack: Vec<&str> = Vec::new();
 	let mut e_stack = vec![(false, &*expr)];
 	let mut result_stack: Vec<Box<DBExpr>> = Vec::new();
@@ -53,7 +53,7 @@ pub fn to_debruijn(expr: Box<Expr>) -> Box<DBExpr> {
 }
 
 /// Converts a term using de Bruijn indices to a term in the "named" form.
-pub fn to_named(expr: Box<DBExpr>) -> Box<Expr> {
+pub fn to_named(expr: &DBExpr) -> Box<Expr> {
 	let mut arg_stack: Vec<(usize, String)> = Vec::new();
 	let mut e_stack = vec![(false, &*expr)];
 	let mut result_stack: Vec<Box<Expr>> = Vec::new();
@@ -120,12 +120,13 @@ mod debruijn_tests {
 	use crate::debruijn::*;
 	use crate::parse::Expr;
 
+	// TODO: Handle free variables
+
 	#[test]
 	fn test_choose_ident() -> () {
 		assert_eq!("a".to_owned(), choose_ident(0));
 		assert_eq!("b".to_owned(), choose_ident(1));
 		assert_eq!("c".to_owned(), choose_ident(2));
-		// TODO: Need to support multi-char identifiers for this to be valid
 		assert_eq!("aa".to_owned(), choose_ident(26));
 		assert_eq!("bb".to_owned(), choose_ident(27));
 		assert_eq!("cc".to_owned(), choose_ident(28));
@@ -138,7 +139,7 @@ mod debruijn_tests {
 			Box::new(Expr::Var("x".to_owned())),
 		));
 		let expected = Box::new(DBExpr::Fun(Box::new(DBExpr::Var(0))));
-		assert_eq!(expected, to_debruijn(e));
+		assert_eq!(expected, to_debruijn(&e));
 	}
 
 	#[test]
@@ -148,7 +149,7 @@ mod debruijn_tests {
 			"a".to_owned(),
 			Box::new(Expr::Var("a".to_owned())),
 		));
-		assert_eq!(expected, to_named(e));
+		assert_eq!(expected, to_named(&e));
 	}
 
 	#[test]
@@ -169,7 +170,7 @@ mod debruijn_tests {
 			Box::new(DBExpr::Var(1)),
 			Box::new(DBExpr::Var(0)),
 		))))));
-		assert_eq!(expected, to_debruijn(e));
+		assert_eq!(expected, to_debruijn(&e));
 	}
 
 	#[test]
@@ -190,7 +191,7 @@ mod debruijn_tests {
 				)),
 			)),
 		));
-		assert_eq!(expected, to_named(e));
+		assert_eq!(expected, to_named(&e));
 	}
 
 	#[test]
@@ -226,7 +227,7 @@ mod debruijn_tests {
 				Box::new(DBExpr::Var(1)),
 			)),
 		))))));
-		assert_eq!(expected, to_debruijn(e));
+		assert_eq!(expected, to_debruijn(&e));
 	}
 
 	#[test]
@@ -262,7 +263,7 @@ mod debruijn_tests {
 				)),
 			)),
 		));
-		assert_eq!(expected, to_named(e));
+		assert_eq!(expected, to_named(&e));
 	}
 
 	#[test]
@@ -292,7 +293,7 @@ mod debruijn_tests {
 			)),
 			Box::new(DBExpr::Var(0)),
 		))));
-		assert_eq!(expected, to_debruijn(e));
+		assert_eq!(expected, to_debruijn(&e));
 	}
 
 	#[test]
@@ -323,6 +324,6 @@ mod debruijn_tests {
 				Box::new(Expr::Var("a".to_owned())),
 			)),
 		));
-		assert_eq!(expected, to_named(e));
+		assert_eq!(expected, to_named(&e));
 	}
 }
