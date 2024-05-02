@@ -1,14 +1,16 @@
 use crate::debruijn::DBExpr;
 
-pub fn eval(e: &DBExpr) -> Box<DBExpr> {
-	let mut ee = Box::new(e.clone());
-	loop {
-		match try_beta_reduce(&ee) {
-			Some(eee) => ee = eee,
-			None => break,
+impl DBExpr {
+	pub fn eval(&self) -> Box<DBExpr> {
+		let mut ee = Box::new(self.clone());
+		loop {
+			match try_beta_reduce(&ee) {
+				Some(eee) => ee = eee,
+				None => break,
+			}
 		}
+		ee
 	}
-	ee
 }
 
 /// Attempts to apply a single beta reduction to the given expression.
@@ -59,12 +61,11 @@ fn replace(e: &DBExpr, arg: &DBExpr, idx: usize) -> Box<DBExpr> {
 #[cfg(test)]
 mod eval_tests {
 	use crate::debruijn::DBExpr;
-	use crate::eval::eval;
 
 	#[test]
 	fn eval_identity() -> () {
 		let id = Box::new(DBExpr::Fun(Box::new(DBExpr::Var(0))));
-		assert_eq!(id, eval(&id));
+		assert_eq!(id, id.eval());
 	}
 
 	#[test]
@@ -88,7 +89,7 @@ mod eval_tests {
 			)),
 			Box::new(DBExpr::Fun(Box::new(DBExpr::Var(0)))),
 		))));
-		assert_eq!(expected, eval(&e));
+		assert_eq!(expected, e.eval());
 	}
 
 	#[test]
@@ -114,6 +115,6 @@ mod eval_tests {
 			Box::new(DBExpr::Var(1)),
 			Box::new(DBExpr::Var(0)),
 		))))));
-		assert_eq!(one, eval(&f));
+		assert_eq!(one, f.eval());
 	}
 }

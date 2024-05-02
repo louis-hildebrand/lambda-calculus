@@ -1,38 +1,42 @@
+use std::fmt::Display;
+
 use crate::parse::Expr;
 
-pub fn emit(e: &Expr) -> String {
-	match e {
-		Expr::Var(name) => name.clone(),
-		Expr::Fun(x, body) => format!("\\{x}.{}", emit(body)),
-		Expr::App(f, a) => {
-			let lhs = match f.as_ref() {
-				Expr::Var(_) | Expr::App(_, _) => emit(f),
-				Expr::Fun(_, _) => format!("({})", emit(f)),
-			};
-			let rhs = match a.as_ref() {
-				Expr::Var(_) => emit(a),
-				Expr::Fun(_, _) | Expr::App(_, _) => format!("({})", emit(a)),
-			};
-			format!("{lhs} {rhs}")
-		}
+impl Display for Expr {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let s = match self {
+			Expr::Var(name) => name.clone(),
+			Expr::Fun(x, body) => format!("\\{x}.{}", body.to_string()),
+			Expr::App(f, a) => {
+				let lhs = match f.as_ref() {
+					Expr::Var(_) | Expr::App(_, _) => f.to_string(),
+					Expr::Fun(_, _) => format!("({})", f.to_string()),
+				};
+				let rhs = match a.as_ref() {
+					Expr::Var(_) => a.to_string(),
+					Expr::Fun(_, _) | Expr::App(_, _) => format!("({})", a.to_string()),
+				};
+				format!("{lhs} {rhs}")
+			}
+		};
+		f.write_str(&s)
 	}
 }
 
 #[cfg(test)]
 mod emit_tests {
-	use crate::emit::emit;
 	use crate::parse::Expr;
 
 	#[test]
 	fn emit_var() -> () {
 		let e = Expr::Var("x".to_owned());
-		assert_eq!("x", emit(&e));
+		assert_eq!("x", e.to_string());
 	}
 
 	#[test]
 	fn emit_identity() -> () {
 		let e = Expr::Fun("z".to_owned(), Box::new(Expr::Var("z".to_owned())));
-		assert_eq!("\\z.z", emit(&e));
+		assert_eq!("\\z.z", e.to_string());
 	}
 
 	#[test]
@@ -41,7 +45,7 @@ mod emit_tests {
 			Box::new(Expr::Var("s".to_owned())),
 			Box::new(Expr::Var("z".to_owned())),
 		);
-		assert_eq!("s z", emit(&e));
+		assert_eq!("s z", e.to_string());
 	}
 
 	#[test]
@@ -53,7 +57,7 @@ mod emit_tests {
 				Box::new(Expr::Var("x".to_owned())),
 			)),
 		);
-		assert_eq!("f (\\x.x)", emit(&e));
+		assert_eq!("f (\\x.x)", e.to_string());
 	}
 
 	#[test]
@@ -65,7 +69,7 @@ mod emit_tests {
 				Box::new(Expr::Var("z".to_owned())),
 			)),
 		);
-		assert_eq!("s (s z)", emit(&e));
+		assert_eq!("s (s z)", e.to_string());
 	}
 
 	#[test]
@@ -77,7 +81,7 @@ mod emit_tests {
 			)),
 			Box::new(Expr::Var("y".to_owned())),
 		);
-		assert_eq!("(\\x.x) y", emit(&e));
+		assert_eq!("(\\x.x) y", e.to_string());
 	}
 
 	#[test]
@@ -92,7 +96,7 @@ mod emit_tests {
 				Box::new(Expr::Var("y".to_owned())),
 			)),
 		);
-		assert_eq!("(\\x.x) (\\y.y)", emit(&e));
+		assert_eq!("(\\x.x) (\\y.y)", e.to_string());
 	}
 
 	#[test]
@@ -107,7 +111,7 @@ mod emit_tests {
 				Box::new(Expr::Var("b".to_owned())),
 			)),
 		);
-		assert_eq!("(\\x.x) (a b)", emit(&e));
+		assert_eq!("(\\x.x) (a b)", e.to_string());
 	}
 
 	#[test]
@@ -119,7 +123,7 @@ mod emit_tests {
 			)),
 			Box::new(Expr::Var("z".to_owned())),
 		);
-		assert_eq!("x y z", emit(&e));
+		assert_eq!("x y z", e.to_string());
 	}
 
 	#[test]
@@ -134,7 +138,7 @@ mod emit_tests {
 				Box::new(Expr::Var("z".to_owned())),
 			)),
 		);
-		assert_eq!("x y (\\z.z)", emit(&e));
+		assert_eq!("x y (\\z.z)", e.to_string());
 	}
 
 	#[test]
@@ -149,6 +153,6 @@ mod emit_tests {
 				Box::new(Expr::Var("w".to_owned())),
 			)),
 		);
-		assert_eq!("x y (z w)", emit(&e));
+		assert_eq!("x y (z w)", e.to_string());
 	}
 }

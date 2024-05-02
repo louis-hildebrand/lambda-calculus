@@ -7,102 +7,107 @@ pub enum DBExpr {
 	Var(usize),
 }
 
-/// Converts a term in the "named" form to a term using de Bruijn indices.
-pub fn to_debruijn(expr: &Expr) -> Box<DBExpr> {
-	let mut arg_stack: Vec<&str> = Vec::new();
-	let mut e_stack = vec![(false, &*expr)];
-	let mut result_stack: Vec<Box<DBExpr>> = Vec::new();
-	while let Some((visited, e)) = e_stack.pop() {
-		if !visited {
-			e_stack.push((true, e));
-		}
-		match (visited, e) {
-			(false, Expr::Fun(x, body)) => {
-				e_stack.push((false, body));
-				arg_stack.push(x);
+impl Expr {
+	/// Converts a term in the "named" form to a term using de Bruijn indices.
+	pub fn to_debruijn(&self) -> Box<DBExpr> {
+		let mut arg_stack: Vec<&str> = Vec::new();
+		let mut e_stack = vec![(false, self)];
+		let mut result_stack: Vec<Box<DBExpr>> = Vec::new();
+		while let Some((visited, e)) = e_stack.pop() {
+			if !visited {
+				e_stack.push((true, e));
 			}
-			(false, Expr::App(e1, e2)) => {
-				e_stack.push((false, e2));
-				e_stack.push((false, e1));
-			}
-			(false, Expr::Var(_)) => {}
-			(true, Expr::Fun(x, _)) => {
-				match result_stack.pop() {
-					Some(e) => result_stack.push(Box::new(DBExpr::Fun(e))),
-					None => panic!("Missing result for function abstraction"),
-				};
-				match arg_stack.pop() {
-					Some(y) if x == y => (),
-					_ => panic!("Unexpected argument popped from the stack"),
+			match (visited, e) {
+				(false, Expr::Fun(x, body)) => {
+					e_stack.push((false, body));
+					arg_stack.push(x);
+				}
+				(false, Expr::App(e1, e2)) => {
+					e_stack.push((false, e2));
+					e_stack.push((false, e1));
+				}
+				(false, Expr::Var(_)) => {}
+				(true, Expr::Fun(x, _)) => {
+					match result_stack.pop() {
+						Some(e) => result_stack.push(Box::new(DBExpr::Fun(e))),
+						None => panic!("Missing result for function abstraction"),
+					};
+					match arg_stack.pop() {
+						Some(y) if x == y => (),
+						_ => panic!("Unexpected argument popped from the stack"),
+					}
+				}
+				(true, Expr::App(_, _)) => match (result_stack.pop(), result_stack.pop()) {
+					(Some(e2), Some(e1)) => result_stack.push(Box::new(DBExpr::App(e1, e2))),
+					_ => panic!("Missing result for function application"),
+				},
+				(true, Expr::Var(x)) => {
+					let i = match arg_stack.iter().rev().position(|y| y == x) {
+						Some(i) => i,
+						None => panic!("Free variable {x} in expression"),
+					};
+					result_stack.push(Box::new(DBExpr::Var(i)));
 				}
 			}
-			(true, Expr::App(_, _)) => match (result_stack.pop(), result_stack.pop()) {
-				(Some(e2), Some(e1)) => result_stack.push(Box::new(DBExpr::App(e1, e2))),
-				_ => panic!("Missing result for function application"),
-			},
-			(true, Expr::Var(x)) => {
-				let i = match arg_stack.iter().rev().position(|y| y == x) {
-					Some(i) => i,
-					None => panic!("Free variable {x} in expression"),
-				};
-				result_stack.push(Box::new(DBExpr::Var(i)));
-			}
 		}
+		result_stack.pop().unwrap()
 	}
-	result_stack.pop().unwrap()
 }
 
-/// Converts a term using de Bruijn indices to a term in the "named" form.
-pub fn to_named(expr: &DBExpr) -> Box<Expr> {
-	let mut arg_stack: Vec<(usize, String)> = Vec::new();
-	let mut e_stack = vec![(false, &*expr)];
-	let mut result_stack: Vec<Box<Expr>> = Vec::new();
-	while let Some((visited, e)) = e_stack.pop() {
-		if !visited {
-			e_stack.push((true, e));
+impl DBExpr {
+	/// Converts a term using de Bruijn indices to a term in the "named" form.
+	pub fn to_named(&self) -> Box<Expr> {
+		let mut arg_stack: Vec<(usize, String)> = Vec::new();
+		let mut e_stack = vec![(false, self)];
+		let mut result_stack: Vec<Box<Expr>> = Vec::new();
+		while let Some((visited, e)) = e_stack.pop() {
+			if !visited {
+				e_stack.push((true, e));
+			}
+			match (visited, e) {
+				(false, DBExpr::Fun(body)) => {
+					let arg_num = match arg_stack.last() {
+						Some((i, _)) => i + 1,
+						None => 0,
+					};
+					let arg_str = choose_ident(arg_num);
+					arg_stack.push((arg_num, arg_str));
+					e_stack.push((false, body));
+				},
+				(false, DBExpr::App(e1, e2)) => {
+					e_stack.push((false, e2));
+					e_stack.push((false, e1));
+				},
+				(false, DBExpr::Var(_)) => {},
+				(true, DBExpr::Fun(_)) => {
+					let arg = match arg_stack.pop() {
+						Some((_, name)) => name,
+						None => panic!("Missing argument"),
+					};
+					match result_stack.pop() {
+						Some(e) => result_stack.push(Box::new(Expr::Fun(arg, e))),
+						None => panic!("Missing result for function abstraction")
+					}
+				},
+				(true, DBExpr::App(_, _)) => {
+					match (result_stack.pop(), result_stack.pop()) {
+						(Some(e2), Some(e1)) => result_stack.push(Box::new(Expr::App(e1, e2))),
+						_ => panic!("Missing result for function application"),
+					}
+				},
+				(true, DBExpr::Var(i)) => {
+					let name = match arg_stack.get(arg_stack.len() - 1 - i) {
+						Some((_, x)) => (*x).to_owned(),
+						None => panic!("Invalid de Bruijn index")
+					};
+					result_stack.push(Box::new(Expr::Var(name)))
+				},
+			}
 		}
-		match (visited, e) {
-			(false, DBExpr::Fun(body)) => {
-				let arg_num = match arg_stack.last() {
-					Some((i, _)) => i + 1,
-					None => 0,
-				};
-				let arg_str = choose_ident(arg_num);
-				arg_stack.push((arg_num, arg_str));
-				e_stack.push((false, body));
-			},
-			(false, DBExpr::App(e1, e2)) => {
-				e_stack.push((false, e2));
-				e_stack.push((false, e1));
-			},
-			(false, DBExpr::Var(_)) => {},
-			(true, DBExpr::Fun(_)) => {
-				let arg = match arg_stack.pop() {
-					Some((_, name)) => name,
-					None => panic!("Missing argument"),
-				};
-				match result_stack.pop() {
-					Some(e) => result_stack.push(Box::new(Expr::Fun(arg, e))),
-					None => panic!("Missing result for function abstraction")
-				}
-			},
-			(true, DBExpr::App(_, _)) => {
-				match (result_stack.pop(), result_stack.pop()) {
-					(Some(e2), Some(e1)) => result_stack.push(Box::new(Expr::App(e1, e2))),
-					_ => panic!("Missing result for function application"),
-				}
-			},
-			(true, DBExpr::Var(i)) => {
-				let name = match arg_stack.get(arg_stack.len() - 1 - i) {
-					Some((_, x)) => (*x).to_owned(),
-					None => panic!("Invalid de Bruijn index")
-				};
-				result_stack.push(Box::new(Expr::Var(name)))
-			},
-		}
+		result_stack.pop().unwrap()
 	}
-	result_stack.pop().unwrap()
 }
+
 
 const ALPHABET: [char; 26] = [
 	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
@@ -139,17 +144,17 @@ mod debruijn_tests {
 			Box::new(Expr::Var("x".to_owned())),
 		));
 		let expected = Box::new(DBExpr::Fun(Box::new(DBExpr::Var(0))));
-		assert_eq!(expected, to_debruijn(&e));
+		assert_eq!(expected, e.to_debruijn());
 	}
 
 	#[test]
 	fn identity_to_named() -> () {
-		let e = Box::new(DBExpr::Fun(Box::new(DBExpr::Var(0))));
+		let e = DBExpr::Fun(Box::new(DBExpr::Var(0)));
 		let expected = Box::new(Expr::Fun(
 			"a".to_owned(),
 			Box::new(Expr::Var("a".to_owned())),
 		));
-		assert_eq!(expected, to_named(&e));
+		assert_eq!(expected, e.to_named());
 	}
 
 	#[test]
@@ -170,7 +175,7 @@ mod debruijn_tests {
 			Box::new(DBExpr::Var(1)),
 			Box::new(DBExpr::Var(0)),
 		))))));
-		assert_eq!(expected, to_debruijn(&e));
+		assert_eq!(expected, e.to_debruijn());
 	}
 
 	#[test]
@@ -191,7 +196,7 @@ mod debruijn_tests {
 				)),
 			)),
 		));
-		assert_eq!(expected, to_named(&e));
+		assert_eq!(expected, e.to_named());
 	}
 
 	#[test]
@@ -227,7 +232,7 @@ mod debruijn_tests {
 				Box::new(DBExpr::Var(1)),
 			)),
 		))))));
-		assert_eq!(expected, to_debruijn(&e));
+		assert_eq!(expected, e.to_debruijn());
 	}
 
 	#[test]
@@ -263,7 +268,7 @@ mod debruijn_tests {
 				)),
 			)),
 		));
-		assert_eq!(expected, to_named(&e));
+		assert_eq!(expected, e.to_named());
 	}
 
 	#[test]
@@ -293,7 +298,7 @@ mod debruijn_tests {
 			)),
 			Box::new(DBExpr::Var(0)),
 		))));
-		assert_eq!(expected, to_debruijn(&e));
+		assert_eq!(expected, e.to_debruijn());
 	}
 
 	#[test]
@@ -324,6 +329,6 @@ mod debruijn_tests {
 				Box::new(Expr::Var("a".to_owned())),
 			)),
 		));
-		assert_eq!(expected, to_named(&e));
+		assert_eq!(expected, e.to_named());
 	}
 }

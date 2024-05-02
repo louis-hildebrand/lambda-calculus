@@ -7,9 +7,10 @@ fn main() {
 		fs::read_to_string(file_path).expect(&format!("should be able to read {}", file_path));
 	let mut stream = lex::lex(&code);
 	let e = parse::parse(&mut stream);
-	let de = debruijn::to_debruijn(&e);
-	let eval_de = eval::eval(&de);
-	let eval_e = debruijn::to_named(&eval_de);
-	let output = emit::emit(&eval_e);
+	let output = e
+		.to_debruijn()
+		.eval()
+		.to_named()
+		.to_string();
 	println!("{output}");
 }
