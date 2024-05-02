@@ -25,7 +25,7 @@ fn try_beta_reduce(e: &DBExpr) -> Option<Box<DBExpr>> {
 		},
 		DBExpr::App(f, arg) => {
 			match f.as_ref() {
-				DBExpr::Fun(body) => return Some(replace(body, arg, 0)),
+				DBExpr::Fun(body) => return Some(Box::new(replace(body, arg, 0))),
 				_ => (),
 			}
 			match try_beta_reduce(f) {
@@ -40,21 +40,42 @@ fn try_beta_reduce(e: &DBExpr) -> Option<Box<DBExpr>> {
 	}
 }
 
-fn replace(e: &DBExpr, arg: &DBExpr, idx: usize) -> Box<DBExpr> {
+fn replace(e: &DBExpr, arg: &DBExpr, depth: usize) -> DBExpr {
 	match e {
-		DBExpr::Var(i) if *i == idx =>
-			// This variable is bound by the lambda we're getting rid of
-			Box::new(arg.clone()),
-		DBExpr::Var(i) if *i > idx =>
-			// This variable is bound by a lambda outside the one we're getting
-			// rid of
-			Box::new(DBExpr::Var(*i - 1)),
+		DBExpr::Var(i) if *i == depth =>
+		// This variable is bound by the lambda we're getting rid of
+		{
+			increment_free_vars(arg, depth, 0)
+		},
+		DBExpr::Var(i) if *i > depth =>
+		// This variable is bound by a lambda outside the one we're getting
+		// rid of
+		{
+			DBExpr::Var(*i - 1)
+		}
 		DBExpr::Var(i) =>
-			// This variable is bound by a lambda inside the one we're getting
-			// rid of
-			Box::new(DBExpr::Var(*i)),
-		DBExpr::Fun(body) => Box::new(DBExpr::Fun(replace(body, arg, idx + 1))),
-		DBExpr::App(f, a) => Box::new(DBExpr::App(replace(f, arg, idx), replace(a, arg, idx))),
+		// This variable is bound by a lambda inside the one we're getting
+		// rid of
+		{
+			DBExpr::Var(*i)
+		}
+		DBExpr::Fun(body) => DBExpr::Fun(Box::new(replace(body, arg, depth + 1))),
+		DBExpr::App(f, a) => DBExpr::App(
+			Box::new(replace(f, arg, depth)),
+			Box::new(replace(a, arg, depth)),
+		),
+	}
+}
+
+fn increment_free_vars(e: &DBExpr, n: usize, depth: usize) -> DBExpr {
+	match e {
+		DBExpr::Var(i) if *i >= depth => DBExpr::Var(*i + n),
+		DBExpr::Var(i) => DBExpr::Var(*i),
+		DBExpr::Fun(body) => DBExpr::Fun(Box::new(increment_free_vars(body, n, depth + 1))),
+		DBExpr::App(f, a) => DBExpr::App(
+			Box::new(increment_free_vars(f, n, depth)),
+			Box::new(increment_free_vars(a, n, depth)),
+		),
 	}
 }
 
@@ -114,6 +135,38 @@ mod eval_tests {
 		let one = Box::new(DBExpr::Fun(Box::new(DBExpr::Fun(Box::new(DBExpr::App(
 			Box::new(DBExpr::Var(1)),
 			Box::new(DBExpr::Var(0)),
+		))))));
+		assert_eq!(one, f.eval());
+	}
+
+	#[test]
+	fn eval_succ_1() -> () {
+		// \\1(0)
+		let one = Box::new(DBExpr::Fun(Box::new(DBExpr::Fun(Box::new(DBExpr::App(
+			Box::new(DBExpr::Var(1)),
+			Box::new(DBExpr::Var(0)),
+		))))));
+		// \\\1(2 1 0)
+		let succ = Box::new(DBExpr::Fun(Box::new(DBExpr::Fun(Box::new(DBExpr::Fun(
+			Box::new(DBExpr::App(
+				Box::new(DBExpr::Var(1)),
+				Box::new(DBExpr::App(
+					Box::new(DBExpr::App(
+						Box::new(DBExpr::Var(2)),
+						Box::new(DBExpr::Var(1)),
+					)),
+					Box::new(DBExpr::Var(0)),
+				)),
+			)),
+		))))));
+		let f = Box::new(DBExpr::App(succ, one));
+		// \\1(1(0))
+		let one = Box::new(DBExpr::Fun(Box::new(DBExpr::Fun(Box::new(DBExpr::App(
+			Box::new(DBExpr::Var(1)),
+			Box::new(DBExpr::App(
+				Box::new(DBExpr::Var(1)),
+				Box::new(DBExpr::Var(0)),
+			)),
 		))))));
 		assert_eq!(one, f.eval());
 	}
