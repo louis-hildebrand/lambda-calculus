@@ -7,6 +7,8 @@ pub enum Token {
 	Dot,
 	Lpar,
 	Rpar,
+	Where,
+	Def,
 	End,
 }
 
@@ -56,8 +58,16 @@ pub fn lex(code: &str) -> TokenStream {
 			')' => {
 				tokens.push_back(Token::Rpar);
 			}
+			'=' => {
+				tokens.push_back(Token::Def)
+			}
 			c if is_ident_char(&c) => {
-				tokens.push_back(lex_ident(c, &mut chars));
+				let name = lex_ident(c, &mut chars);
+				let tok = match name.as_str() {
+					"where" => Token::Where,
+					_ => Token::Ident(name),
+				};
+				tokens.push_back(tok);
 			}
 			c if c.is_whitespace() => {}
 			c => {
@@ -69,7 +79,7 @@ pub fn lex(code: &str) -> TokenStream {
 	TokenStream { tokens: tokens }
 }
 
-fn lex_ident(first: char, chars: &mut Peekable<Chars>) -> Token {
+fn lex_ident(first: char, chars: &mut Peekable<Chars>) -> String {
 	let mut s = vec![first];
 	loop {
 		match chars.peek() {
@@ -80,7 +90,7 @@ fn lex_ident(first: char, chars: &mut Peekable<Chars>) -> Token {
 			_ => break,
 		}
 	}
-	Token::Ident(s.iter().collect())
+	s.iter().collect()
 }
 
 fn is_ident_char(c: &char) -> bool {
@@ -165,6 +175,16 @@ mod lex_tests {
 	}
 
 	#[test]
+	fn lex_where() -> () {
+		assert_eq!(vec![Token::Where], lex("where").all());
+	}
+
+	#[test]
+	fn lex_def() -> () {
+		assert_eq!(vec![Token::Def], lex("=").all());
+	}
+
+	#[test]
 	fn lex_identity() -> () {
 		assert_eq!(
 			vec![
@@ -235,7 +255,7 @@ mod lex_tests {
 	}
 
 	#[test]
-	fn lex_multiline() -> () {
+	fn lex_with_whitespace() -> () {
 		assert_eq!(
 			vec![
 				Token::Lambda,
@@ -251,6 +271,30 @@ mod lex_tests {
 				Token::Rpar,
 			],
 			lex("\\a.\\b.\n\ta (a b)").all()
+		);
+	}
+	#[test]
+	fn lex_with_decls() -> () {
+		assert_eq!(
+			vec![
+				Token::Ident("f".to_owned()),
+				Token::Ident("x".to_owned()),
+				Token::Where,
+				Token::Ident("f".to_owned()),
+				Token::Def,
+				Token::Lambda,
+				Token::Ident("z".to_owned()),
+				Token::Dot,
+				Token::Ident("z".to_owned()),
+				Token::Where,
+				Token::Ident("x".to_owned()),
+				Token::Def,
+				Token::Lambda,
+				Token::Ident("a".to_owned()),
+				Token::Dot,
+				Token::Ident("a".to_owned())
+			],
+			lex(r#"f x where f = \z.z where x = \a.a"#).all()
 		);
 	}
 }

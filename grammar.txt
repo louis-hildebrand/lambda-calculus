@@ -1,15 +1,19 @@
 # ORIGINAL #####################################################################
 ################################################################################
 
-e ::= "\" ident "." e  # Function abstraction
-    | e e              # Function application
-    | ident            # Variable use
-    | "(" e ")"        # Parentheses
+prog ::= e decl*
+e    ::= "\" ident "." e  # Function abstraction
+       | e e              # Function application
+       | ident            # Variable use
+       | "(" e ")"        # Parentheses
+decl ::= "where" ident "=" e
 
 # MASSAGED #####################################################################
 ################################################################################
 
+prog ::= e decl*
 e  ::= e' (e')*
 e' ::= "\" ident "." e
      | ident
      | "(" e ")"
+decl ::= "where" ident "=" e
