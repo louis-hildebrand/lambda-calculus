@@ -36,8 +36,8 @@ impl TokenStream {
 	}
 }
 
-const IDENT_SPECIAL_CHARS: [char; 27] = [
-	'~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '-', '_', '+', '[', '{', ']', '}', '|', ':',
+const IDENT_SPECIAL_CHARS: [char; 25] = [
+	'~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '-', '_', '+', '[', ']', '|', ':',
 	';', '\'', '"', ',', '<', '>', '/', '?',
 ];
 
@@ -60,6 +60,18 @@ pub fn lex(code: &str) -> TokenStream {
 			}
 			'=' => {
 				tokens.push_back(Token::Def)
+			}
+			'{' => {
+				let mut n: usize = 0;
+				loop {
+					match chars.next() {
+						Some('}') if n == 0 => break,
+						Some('}') => n -= 1,
+						Some('{') => n += 1,
+						None => panic!("Unclosed comment"),
+						_ => {},
+					}
+				}
 			}
 			c if is_ident_char(&c) => {
 				let name = lex_ident(c, &mut chars);
@@ -102,6 +114,28 @@ mod lex_tests {
 	use crate::lex::*;
 
 	#[test]
+	fn lex_comment() -> () {
+		assert_eq!(vec![Token::Lambda], lex(r#"{ Hello there! } \"#).all())
+	}
+
+	#[test]
+	fn lex_nested_comments() -> () {
+		assert_eq!(vec![Token::Lambda], lex(r#"{ Outside { Inside } Outside } \"#).all())
+	}
+
+	#[test]
+	#[should_panic(expected = "Unclosed comment")]
+	fn lex_unclosed_comment() -> () {
+		lex(r#"{ Hello there!"#);
+	}
+
+	#[test]
+	#[should_panic(expected = "Unclosed comment")]
+	fn lex_unclosed_nested_comment() -> () {
+		lex(r#"{ { Hello there! }"#);
+	}
+
+	#[test]
 	fn lex_lambda() -> () {
 		assert_eq!(vec![Token::Lambda], lex(r#"\"#).all());
 	}
@@ -140,9 +174,7 @@ mod lex_tests {
 				Token::Ident("__".to_owned()),
 				Token::Ident("++".to_owned()),
 				Token::Ident("[[".to_owned()),
-				Token::Ident("{{".to_owned()),
 				Token::Ident("]]".to_owned()),
-				Token::Ident("}}".to_owned()),
 				Token::Ident("||".to_owned()),
 				Token::Ident("::".to_owned()),
 				Token::Ident(";;".to_owned()),
@@ -155,7 +187,7 @@ mod lex_tests {
 				Token::Ident("??".to_owned()),
 				Token::Dot,
 			],
-			lex("ab CD 12 ~~ `` !! @@ ## $$ %% ^^ && ** -- __ ++ [[ {{ ]] }} || :: ;; '' \"\" ,, << >> // ?? .").all(),
+			lex("ab CD 12 ~~ `` !! @@ ## $$ %% ^^ && ** -- __ ++ [[ ]] || :: ;; '' \"\" ,, << >> // ?? .").all(),
 		);
 	}
 
