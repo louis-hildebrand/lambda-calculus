@@ -1,0 +1,7 @@
++ 4 2
+where +    = \a.\b.a succ b
+where 4    = succ (succ 2)
+where 2    = \s.\z.s(s(z))
+where succ = \n.\s.\z.s(n s z)
+
+{ RESULT: \a.\b.a (a (a (a (a (a b))))) }
