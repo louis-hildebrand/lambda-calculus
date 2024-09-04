@@ -1,0 +1,35 @@
+{
+	"name": "lambda",
+	"version": "0.1.0",
+	"description": "A simple interpreter for the untyped lambda calculus.",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/louis-hildebrand/lambda-calculus/"
+	},
+	"homepage": "https://github.com/louis-hildebrand/lambda-calculus/",
+	"bugs": {
+		"url": "https://github.com/louis-hildebrand/lambda-calculus/issues"
+	},
+	"author": "Louis Hildebrand <louis.hildebrand@mail.mcgill.ca>",
+	"license": "(MIT OR Apache-2.0)",
+	"main": "index.js",
+	"bin": {
+		"lambda": ".bin/lambda.js"
+	},
+	"scripts": {
+		"build": "webpack --config webpack.config.js",
+		"start": "webpack-dev-server"
+	},
+	"keywords": [
+		"lambda calculus"
+	],
+	"dependencies": {
+		"lambda": "file:../pkg"
+	},
+	"devDependencies": {
+		"webpack": "^4.29.3",
+		"webpack-cli": "^3.1.0",
+		"webpack-dev-server": "^3.1.5",
+		"copy-webpack-plugin": "^5.0.0"
+	}
+}

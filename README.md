@@ -25,3 +25,26 @@ where succ = \n.\s.\z.s(n s z)
 ```
 
 More examples can be found in the [examples/](./examples/) directory.
+
+## Running on localhost
+
+Starting in the root of the repository, run the following commands (without the dollar signs).
+You should then be able to access the website at http://localhost:8080.
+
+```bash
+$ wasm-pack build
+$ cd www
+$ npm install  # (only the first time)
+$ npm run start
+```
+
+## Running via Command Line
+
+In the root of the repository, run `cargo build`.
+You should then be able to run the command-line tool using `./target/debug/lambda`, as in the example below.
+
+```bash
+$ cargo build
+$ ./target/debug/lambda -f ./examples/plus.lam
+\a.\b.a (a (a (a (a (a b)))))
+```
