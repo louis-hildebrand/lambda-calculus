@@ -17,7 +17,7 @@
 		"lambda": ".bin/lambda.js"
 	},
 	"scripts": {
-		"build": "webpack --config webpack.config.js",
+		"build": "webpack --config webpack.config.js --mode production",
 		"start": "webpack-dev-server"
 	},
 	"keywords": [
