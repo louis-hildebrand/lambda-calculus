@@ -38,6 +38,17 @@ $ npm install  # (only the first time)
 $ npm run start
 ```
 
+## Deploying to GitHub Pages
+
+1. Start in the root of the repository.
+2. Clean up old artifacts using `git clean -xdi`.
+3. Run `wasm-pack build`.
+4. Move to the `www` directory.
+5. Run `npm install`.
+6. Run `npm run build`. This should produce some build artifacts in the `www/dist/` directory.
+7. Copy the contents of `www/dist/` as well as any CSS files in `www/` into the root of the repository in the `gh-pages` branch.
+8. Commit the changes and push to GitHub.
+
 ## Running via Command Line
 
 In the root of the repository, run `cargo build`.
