@@ -11,7 +11,7 @@ pub fn test_examples() -> Result<(), Box<dyn Error>> {
 		let result_line = contents.split("\n").filter(|ln| ln.starts_with("{ RESULT: ")).nth(0);
 		let result = match result_line {
 			None => panic!("No result found in {:?}", f),
-			Some(s) => s.strip_prefix("{ RESULT: ").unwrap().strip_suffix(" }").unwrap(),
+			Some(s) => s.strip_prefix("{ RESULT: ").unwrap().strip_suffix(" }").unwrap().trim(),
 		};
 		
 		let mut cmd = Command::cargo_bin("lambda")?;

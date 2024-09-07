@@ -14,7 +14,14 @@
 		<h1>Lambda Calculus</h1>
 		<h2>Input</h2>
 		<textarea id="input-block"></textarea>
-		<button id="eval-btn">Evaluate!</button>
+		<div>
+			<span>Interpret result as:</span>
+			<select id="interpret-as">
+				<option value="expr">Expression</option>
+				<option value="bool">Boolean</option>
+			</select>
+			<button id="eval-btn">Evaluate</button>
+		</div>
 		<h2>Output</h2>
 		<textarea id="output-block" readonly></textarea>
 	</body>
