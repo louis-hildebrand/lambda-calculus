@@ -1,3 +1,4 @@
+use crate::interpret_as::{interpret_as, DataType};
 use anyhow::Context;
 use clap::Parser;
 use lambda::*;
@@ -12,6 +13,9 @@ struct Args {
 	/// File from which to read a lambda term.
 	#[arg(short, long)]
 	file: Option<PathBuf>,
+	/// What datatype to interpret the result as.
+	#[arg(short, long)]
+	interpret_as: DataType,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -26,7 +30,11 @@ fn main() -> anyhow::Result<()> {
 	};
 	let mut stream = lex::lex(&code);
 	let e = parse::parse(&mut stream);
-	let output = e.to_debruijn().eval().to_named().to_string();
+	let evaluated = e.to_debruijn().eval().to_named();
+	let output = match interpret_as(&evaluated, &args.interpret_as) {
+		Ok(s) => s,
+		Err(()) => format!("Failed to interpret result as {:?}.", &args.interpret_as),
+	};
 	println!("{output}");
 	Ok(())
 }

@@ -1,5 +1,7 @@
 use crate::parse::Expr;
+use clap;
 
+#[derive(Clone, Debug, clap::ValueEnum)]
 pub enum DataType {
 	Expr,
 	Boolean,
@@ -19,7 +21,7 @@ impl TryFrom<&str> for DataType {
 	}
 }
 
-pub fn interpret_as(e: &Expr, dt: DataType) -> Result<String, ()> {
+pub fn interpret_as(e: &Expr, dt: &DataType) -> Result<String, ()> {
 	match dt {
 		DataType::Expr => Ok(e.to_string()),
 		DataType::Boolean => interpret_as_bool(e),
@@ -83,7 +85,7 @@ mod interpret_as_tests {
 	#[test]
 	fn test_interpret_id_as_expr() {
 		assert_eq!(
-			interpret_as(&parse("\\x.x"), DataType::Expr),
+			interpret_as(&parse("\\x.x"), &DataType::Expr),
 			Ok("\\x.x".to_owned())
 		);
 	}
@@ -91,7 +93,7 @@ mod interpret_as_tests {
 	#[test]
 	fn test_interpret_as_bool_false() {
 		assert_eq!(
-			interpret_as(&parse("\\a.\\b.b"), DataType::Boolean),
+			interpret_as(&parse("\\a.\\b.b"), &DataType::Boolean),
 			Ok("false".to_owned())
 		);
 	}
@@ -99,7 +101,7 @@ mod interpret_as_tests {
 	#[test]
 	fn test_interpret_as_bool_true() {
 		assert_eq!(
-			interpret_as(&parse("\\a.\\b.a"), DataType::Boolean),
+			interpret_as(&parse("\\a.\\b.a"), &DataType::Boolean),
 			Ok("true".to_owned())
 		);
 	}
@@ -107,25 +109,25 @@ mod interpret_as_tests {
 	#[test]
 	fn test_interpret_as_bool_free_var() {
 		assert_eq!(
-			interpret_as(&parse("\\a.\\b.c"), DataType::Boolean),
+			interpret_as(&parse("\\a.\\b.c"), &DataType::Boolean),
 			Err(())
 		);
 	}
 
 	#[test]
 	fn test_interpret_as_bool_invalid_structure_1() {
-		assert_eq!(interpret_as(&parse("a"), DataType::Boolean), Err(()));
+		assert_eq!(interpret_as(&parse("a"), &DataType::Boolean), Err(()));
 	}
 
 	#[test]
 	fn test_interpret_as_bool_invalid_structure_2() {
-		assert_eq!(interpret_as(&parse("\\a.a"), DataType::Boolean), Err(()));
+		assert_eq!(interpret_as(&parse("\\a.a"), &DataType::Boolean), Err(()));
 	}
 
 	#[test]
 	fn test_interpret_as_bool_invalid_structure_3() {
 		assert_eq!(
-			interpret_as(&parse("\\a.\\b.a b"), DataType::Boolean),
+			interpret_as(&parse("\\a.\\b.a b"), &DataType::Boolean),
 			Err(())
 		);
 	}
@@ -133,7 +135,7 @@ mod interpret_as_tests {
 	#[test]
 	fn test_interpret_as_church_zero() {
 		assert_eq!(
-			interpret_as(&parse("\\s.\\z.z"), DataType::ChurchNumeral),
+			interpret_as(&parse("\\s.\\z.z"), &DataType::ChurchNumeral),
 			Ok("0".to_owned())
 		);
 	}
@@ -141,7 +143,7 @@ mod interpret_as_tests {
 	#[test]
 	fn test_interpret_as_church_one() {
 		assert_eq!(
-			interpret_as(&parse("\\s.\\z.s(z)"), DataType::ChurchNumeral),
+			interpret_as(&parse("\\s.\\z.s(z)"), &DataType::ChurchNumeral),
 			Ok("1".to_owned())
 		);
 	}
@@ -149,7 +151,7 @@ mod interpret_as_tests {
 	#[test]
 	fn test_interpret_as_church_two() {
 		assert_eq!(
-			interpret_as(&parse("\\s.\\z.s(s(z))"), DataType::ChurchNumeral),
+			interpret_as(&parse("\\s.\\z.s(s(z))"), &DataType::ChurchNumeral),
 			Ok("2".to_owned())
 		);
 	}
@@ -157,7 +159,7 @@ mod interpret_as_tests {
 	#[test]
 	fn test_interpret_as_church_three() {
 		assert_eq!(
-			interpret_as(&parse("\\s.\\z.s(s(s(z)))"), DataType::ChurchNumeral),
+			interpret_as(&parse("\\s.\\z.s(s(s(z)))"), &DataType::ChurchNumeral),
 			Ok("3".to_owned())
 		);
 	}
@@ -165,20 +167,20 @@ mod interpret_as_tests {
 	#[test]
 	fn test_interpret_as_church_four() {
 		assert_eq!(
-			interpret_as(&parse("\\s.\\z.s(s(s(s(z))))"), DataType::ChurchNumeral),
+			interpret_as(&parse("\\s.\\z.s(s(s(s(z))))"), &DataType::ChurchNumeral),
 			Ok("4".to_owned())
 		);
 	}
 
 	#[test]
 	fn test_interpret_as_church_invalid_structure_1() {
-		assert_eq!(interpret_as(&parse("a"), DataType::ChurchNumeral), Err(()));
+		assert_eq!(interpret_as(&parse("a"), &DataType::ChurchNumeral), Err(()));
 	}
 
 	#[test]
 	fn test_interpret_as_church_invalid_structure_2() {
 		assert_eq!(
-			interpret_as(&parse("\\a.a"), DataType::ChurchNumeral),
+			interpret_as(&parse("\\a.a"), &DataType::ChurchNumeral),
 			Err(())
 		);
 	}
@@ -186,7 +188,7 @@ mod interpret_as_tests {
 	#[test]
 	fn test_interpret_as_church_invalid_structure_3() {
 		assert_eq!(
-			interpret_as(&parse("\\a.\\b.b a"), DataType::ChurchNumeral),
+			interpret_as(&parse("\\a.\\b.b a"), &DataType::ChurchNumeral),
 			Err(())
 		);
 	}

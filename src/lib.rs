@@ -27,8 +27,8 @@ pub fn eval_lambda(e: &str, datatype: &str) -> String {
 	let e = parse::parse(&mut stream);
 	let evaluated = e.to_debruijn().eval().to_named();
 	let out = match datatype.try_into() {
-		Ok(dt) => interpret_as(&evaluated, dt),
-		Err(()) => Err(())
+		Ok(dt) => interpret_as(&evaluated, &dt),
+		Err(()) => Err(()),
 	};
 	match out {
 		Ok(s) => s,
