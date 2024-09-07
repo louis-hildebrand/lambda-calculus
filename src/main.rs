@@ -14,7 +14,7 @@ struct Args {
 	#[arg(short, long)]
 	file: Option<PathBuf>,
 	/// What datatype to interpret the result as.
-	#[arg(short, long)]
+	#[arg(short, long, default_value = "expr")]
 	interpret_as: DataType,
 }
 
