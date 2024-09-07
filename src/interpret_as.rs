@@ -3,6 +3,7 @@ use crate::parse::Expr;
 pub enum DataType {
 	Expr,
 	Boolean,
+	ChurchNumeral,
 }
 
 impl TryFrom<&str> for DataType {
@@ -12,6 +13,7 @@ impl TryFrom<&str> for DataType {
 		match value {
 			"expr" => Ok(DataType::Expr),
 			"bool" => Ok(DataType::Boolean),
+			"church" => Ok(DataType::ChurchNumeral),
 			_ => Err(()),
 		}
 	}
@@ -21,6 +23,7 @@ pub fn interpret_as(e: &Expr, dt: DataType) -> Result<String, ()> {
 	match dt {
 		DataType::Expr => Ok(e.to_string()),
 		DataType::Boolean => interpret_as_bool(e),
+		DataType::ChurchNumeral => interpret_as_church(e),
 	}
 }
 
@@ -38,83 +41,153 @@ fn interpret_as_bool(e: &Expr) -> Result<String, ()> {
 	}
 }
 
+fn interpret_as_church(e: &Expr) -> Result<String, ()> {
+	match e {
+		Expr::Fun(s, body) => match body.as_ref() {
+			Expr::Fun(z, body) => {
+				let mut n = 0;
+				let mut e = body;
+				loop {
+					match e.as_ref() {
+						Expr::Var(x) if x == z => break Ok(n.to_string()),
+						Expr::App(a, b) => {
+							match a.as_ref() {
+								Expr::Var(x) if x == s => {}
+								_ => break Err(()),
+							}
+							n += 1;
+							e = b;
+						}
+						_ => break Err(()),
+					}
+				}
+			}
+			_ => Err(()),
+		},
+		_ => Err(()),
+	}
+}
+
 #[cfg(test)]
 mod interpret_as_tests {
 	use crate::interpret_as::*;
+	use crate::lex;
+	use crate::parse;
 	use crate::parse::Expr;
+
+	fn parse(e: &str) -> Box<Expr> {
+		let mut stream = lex::lex(e);
+		parse::parse(&mut stream)
+	}
 
 	#[test]
 	fn test_interpret_id_as_expr() {
-		let id = Box::new(Expr::Fun(
-			"a".to_owned(),
-			Box::new(Expr::Var("a".to_owned())),
-		));
-		assert_eq!(interpret_as(&id, DataType::Expr), Ok("\\a.a".to_owned()));
+		assert_eq!(
+			interpret_as(&parse("\\x.x"), DataType::Expr),
+			Ok("\\x.x".to_owned())
+		);
 	}
 
 	#[test]
 	fn test_interpret_as_bool_false() {
-		let f = Box::new(Expr::Fun(
-			"a".to_owned(),
-			Box::new(Expr::Fun(
-				"b".to_owned(),
-				Box::new(Expr::Var("b".to_owned())),
-			)),
-		));
-		assert_eq!(interpret_as(&f, DataType::Boolean), Ok("false".to_owned()));
+		assert_eq!(
+			interpret_as(&parse("\\a.\\b.b"), DataType::Boolean),
+			Ok("false".to_owned())
+		);
 	}
 
 	#[test]
 	fn test_interpret_as_bool_true() {
-		let f = Box::new(Expr::Fun(
-			"a".to_owned(),
-			Box::new(Expr::Fun(
-				"b".to_owned(),
-				Box::new(Expr::Var("a".to_owned())),
-			)),
-		));
-		assert_eq!(interpret_as(&f, DataType::Boolean), Ok("true".to_owned()));
+		assert_eq!(
+			interpret_as(&parse("\\a.\\b.a"), DataType::Boolean),
+			Ok("true".to_owned())
+		);
 	}
 
 	#[test]
 	fn test_interpret_as_bool_free_var() {
-		let f = Box::new(Expr::Fun(
-			"a".to_owned(),
-			Box::new(Expr::Fun(
-				"b".to_owned(),
-				Box::new(Expr::Var("c".to_owned())),
-			)),
-		));
-		assert_eq!(interpret_as(&f, DataType::Boolean), Err(()));
+		assert_eq!(
+			interpret_as(&parse("\\a.\\b.c"), DataType::Boolean),
+			Err(())
+		);
 	}
 
 	#[test]
 	fn test_interpret_as_bool_invalid_structure_1() {
-		let f = Box::new(Expr::Var("a".to_owned()));
-		assert_eq!(interpret_as(&f, DataType::Boolean), Err(()));
+		assert_eq!(interpret_as(&parse("a"), DataType::Boolean), Err(()));
 	}
 
 	#[test]
 	fn test_interpret_as_bool_invalid_structure_2() {
-		let f = Box::new(Expr::Fun(
-			"a".to_owned(),
-			Box::new(Expr::Var("a".to_owned())),
-		));
-		assert_eq!(interpret_as(&f, DataType::Boolean), Err(()));
+		assert_eq!(interpret_as(&parse("\\a.a"), DataType::Boolean), Err(()));
 	}
 
 	#[test]
 	fn test_interpret_as_bool_invalid_structure_3() {
-		let f = Box::new(Expr::Fun(
-			"a".to_owned(),
-			Box::new(Expr::Fun(
-				"b".to_owned(),
-				Box::new(Expr::App(
-					Box::new(Expr::Var("a".to_owned())),
-					Box::new(Expr::Var("b".to_owned())),
-				)),
-			)),
-		));
-		assert_eq!(interpret_as(&f, DataType::Boolean), Err(()));
+		assert_eq!(
+			interpret_as(&parse("\\a.\\b.a b"), DataType::Boolean),
+			Err(())
+		);
+	}
+
+	#[test]
+	fn test_interpret_as_church_zero() {
+		assert_eq!(
+			interpret_as(&parse("\\s.\\z.z"), DataType::ChurchNumeral),
+			Ok("0".to_owned())
+		);
+	}
+
+	#[test]
+	fn test_interpret_as_church_one() {
+		assert_eq!(
+			interpret_as(&parse("\\s.\\z.s(z)"), DataType::ChurchNumeral),
+			Ok("1".to_owned())
+		);
+	}
+
+	#[test]
+	fn test_interpret_as_church_two() {
+		assert_eq!(
+			interpret_as(&parse("\\s.\\z.s(s(z))"), DataType::ChurchNumeral),
+			Ok("2".to_owned())
+		);
+	}
+
+	#[test]
+	fn test_interpret_as_church_three() {
+		assert_eq!(
+			interpret_as(&parse("\\s.\\z.s(s(s(z)))"), DataType::ChurchNumeral),
+			Ok("3".to_owned())
+		);
+	}
+
+	#[test]
+	fn test_interpret_as_church_four() {
+		assert_eq!(
+			interpret_as(&parse("\\s.\\z.s(s(s(s(z))))"), DataType::ChurchNumeral),
+			Ok("4".to_owned())
+		);
+	}
+
+	#[test]
+	fn test_interpret_as_church_invalid_structure_1() {
+		assert_eq!(interpret_as(&parse("a"), DataType::ChurchNumeral), Err(()));
+	}
+
+	#[test]
+	fn test_interpret_as_church_invalid_structure_2() {
+		assert_eq!(
+			interpret_as(&parse("\\a.a"), DataType::ChurchNumeral),
+			Err(())
+		);
+	}
+
+	#[test]
+	fn test_interpret_as_church_invalid_structure_3() {
+		assert_eq!(
+			interpret_as(&parse("\\a.\\b.b a"), DataType::ChurchNumeral),
+			Err(())
+		);
 	}
 }
