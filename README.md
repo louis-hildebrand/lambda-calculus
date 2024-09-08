@@ -24,8 +24,6 @@ where succ = \n.\s.\z.s(n s z)
 { RESULT: \s.\z.s(s(s(s(s(s(z))))))  [i.e., 6] }
 ```
 
-More examples can be found in the [examples/](./examples/) directory.
-
 ## Running on localhost
 
 Starting in the root of the repository, run the following commands (without the dollar signs).
@@ -42,14 +40,3 @@ $ npm run start
 
 To deploy to GitHub Pages, run `deploy.sh`.
 This will build the app and push to the `gh-pages` branch.
-
-## Running via Command Line
-
-In the root of the repository, run `cargo build`.
-You should then be able to run the command-line tool using `./target/debug/lambda`, as in the example below.
-
-```bash
-$ cargo build
-$ ./target/debug/lambda -f ./examples/plus.lam
-\a.\b.a (a (a (a (a (a b)))))
-```

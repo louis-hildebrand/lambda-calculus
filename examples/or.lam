@@ -1,6 +1,0 @@
-\a.a (|| F F) (|| F T) (|| T F) (|| T T)
-where || = \a.\b.a T b
-where T  = \a.\b.a
-where F  = \a.\b.b
-
-{ RESULT: \a.a (\b.\c.c) (\b.\c.b) (\b.\c.b) (\b.\c.b) }

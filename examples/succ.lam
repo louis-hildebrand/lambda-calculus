@@ -1,6 +1,0 @@
-succ 3
-where succ = \n.\s.\z.s(n s z)
-where 3 = \s.\z.s(s(s(z)))
-
-{ RESULT:            \a.\b.a (a (a (a b))) }
-{ RESULT-CHURCH-NUM: 4 }

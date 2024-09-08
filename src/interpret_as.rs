@@ -1,7 +1,6 @@
 use crate::parse::Expr;
-use clap;
 
-#[derive(Clone, Debug, clap::ValueEnum)]
+#[derive(Clone, Debug)]
 pub enum DataType {
 	Expr,
 	Boolean,
