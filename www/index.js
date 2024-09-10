@@ -20,13 +20,13 @@ if (exercise) {
 		const showAnswerBtn = document.getElementById("show-answer-btn");
 		showAnswerBtn.style.visibility = "visible";
 		showAnswerBtn.addEventListener("click", () => {
-			document.getElementById("input-block").textContent = exercise.answer;
+			document.getElementById("input-block").value = exercise.answer;
 		});
 	}
 } else {
 	url.searchParams.delete("ex");
 	window.history.replaceState(null, null, url);
-	document.getElementById("input-block").innerHTML = `succ n
+	document.getElementById("input-block").value = `succ n
 where succ = \\n.\\s.\\z.s(n s z)
 where    n = \\s.\\z.s(s(s(z))) { 3 }`;
 }
@@ -37,14 +37,14 @@ document.getElementById("interpret-as").addEventListener("change", () => {
 });
 
 document.getElementById("eval-btn").addEventListener("click", () => {
-	document.getElementById("output-block").textContent = "...";
+	document.getElementById("output-block").value = "...";
 	const e = document.getElementById("input-block").value;
 	const datatype = document.getElementById("interpret-as").value;
-	document.getElementById("output-block").textContent = lambda.eval_lambda(e, datatype);
+	document.getElementById("output-block").value = lambda.eval_lambda(e, datatype);
 });
 
 document.getElementById("clear-btn").addEventListener("click", () => {
-	document.getElementById("input-block").textContent = "";
+	document.getElementById("input-block").value = "";
 });
 
 function getBaseUrl() {
