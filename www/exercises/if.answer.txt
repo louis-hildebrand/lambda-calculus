@@ -1,0 +1,13 @@
+  if F 6 0           { output: 0 }
+{ if T 6 0 }         { output: 6 }
+{ if (&& T F) 5 4 }  { output: 4 }
+{ if (|| T F) 5 4 }  { output: 5 }
+where if = \c.\t.\f.c t f
+where && = \a.\b.a b F
+where || = \a.\b.a T b
+where  T = \t.\f.t
+where  F = \t.\f.f
+where  0 = \s.\z.z
+where  4 = \s.\z.s(s(s(s(z))))
+where  5 = \s.\z.s(s(s(s(s(z)))))
+where  6 = \s.\z.s(s(s(s(s(s(z))))))

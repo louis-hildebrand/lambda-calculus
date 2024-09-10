@@ -1,0 +1,5 @@
+  ! F
+{ ! T }
+where ! = \x.x F T
+where F = \t.\f.f
+where T = \t.\f.t

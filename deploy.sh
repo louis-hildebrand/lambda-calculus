@@ -26,10 +26,6 @@ cd www
 npm install
 npm run build
 
-# Manually copy CSS files into www/dist/ because it's not immediately obvious
-# how to do that directly with webpack.
-cp ./*.css ./dist
-
 # Deploy to gh-pages branch, overwriting previous deployment
 if git rev-parse --verify gh-pages; then
 	git branch --delete --force gh-pages

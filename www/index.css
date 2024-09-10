@@ -26,9 +26,16 @@ body {
 #input-block, #output-block {
 	width: 100%;
 	box-sizing: border-box;
-	flex: 1 1 auto;
 	/* Remove the little resize icon in the bottom right corner. */
 	resize: none;
+}
+
+#input-block {
+	flex-grow: 0.8;
+}
+
+#output-block {
+	flex-grow: 0.2;
 }
 
 /* Other style -------------------------------------------------------------- */
@@ -38,4 +45,14 @@ body {
 	background-color: #dddddd;
 	border: 1px solid black;
 	border-radius: 5px;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+td, th {
+	border: 1px solid black;
+	padding: 0.25em;
+	text-align: right;
 }
