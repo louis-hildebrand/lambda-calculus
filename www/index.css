@@ -56,3 +56,7 @@ td, th {
 	padding: 0.25em;
 	text-align: right;
 }
+
+#exercise-description {
+	width: 100%;
+}

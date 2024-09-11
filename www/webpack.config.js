@@ -11,6 +11,7 @@ module.exports = {
   mode: "development",
   plugins: [
     new CopyWebpackPlugin([
+      "exercises.html",
       "index.html",
       "index.css",
       { from: "exercises", to: "exercises" }])

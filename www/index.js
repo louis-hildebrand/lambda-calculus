@@ -16,12 +16,14 @@ if (VALID_DATA_TYPES.includes(dt)) {
 const exercise = await getExercise(url.searchParams.get("ex"));
 if (exercise) {
 	document.getElementById("exercise-description").innerHTML = exercise.description;
+	const showAnswerBtn = document.getElementById("show-answer-btn");
 	if (exercise.answer) {
-		const showAnswerBtn = document.getElementById("show-answer-btn");
 		showAnswerBtn.style.visibility = "visible";
 		showAnswerBtn.addEventListener("click", () => {
 			document.getElementById("input-block").value = exercise.answer;
 		});
+	} else {
+		showAnswerBtn.style.visibility = "hidden";
 	}
 } else {
 	url.searchParams.delete("ex");
@@ -77,17 +79,11 @@ async function getExercise(exercise) {
 
 		const answerResponse = await fetch(`${BASE_URL}/exercises/${exercise}.answer.txt`);
 		if (!answerResponse.ok) {
-			return {
-				description: description,
-				answer: "{ Failed to fetch answer. }"
-			};
+			return { description: description, answer: null };
 		}
 		const answer = await answerResponse.text();
 
-		return {
-			description: description,
-			answer: answer
-		};
+		return { description: description, answer: answer };
 	} catch (error) {
 		console.error(error);
 		return null;
