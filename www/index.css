@@ -9,18 +9,39 @@ html {
 }
 
 body {
-	width: 100%;
-	height: 100%;
-	margin: 0;
-	padding: 10px;
-	box-sizing: border-box;
-}
-
-body {
 	display: flex;
 	flex-direction: column;
 	align-items: baseline;
 	justify-content: stretch;
+	padding: 0;
+}
+
+body, main {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	box-sizing: border-box;
+}
+
+header {
+	width: 100%;
+	margin: 0;
+}
+
+header, main {
+	padding: 1em;
+}
+
+main {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	align-items: baseline;
+	justify-content: stretch;
+}
+
+#interpreter-main {
+	gap: 0.5em;
 }
 
 #input-block, #output-block {
@@ -39,6 +60,19 @@ body {
 }
 
 /* Other style -------------------------------------------------------------- */
+
+#logo {
+	font-size: xx-large;
+}
+
+header {
+	background-color: lightgrey;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: baseline;
+	gap: 1em;
+}
 
 #input-block, #output-block {
 	font-family: monospace;
