@@ -19,15 +19,20 @@ fn test_or() {
 	let f = "\\a.\\b.b";
 	let t = "\\a.\\b.a";
 
-	assert_eq!(eval_lambda(&e("|| F F"), "expr"), f);
-	assert_eq!(eval_lambda(&e("|| F T"), "expr"), t);
-	assert_eq!(eval_lambda(&e("|| T F"), "expr"), t);
-	assert_eq!(eval_lambda(&e("|| T T"), "expr"), t);
+	assert_eq!(eval_lambda(&e("|| F F")), f);
+	assert_eq!(eval_lambda(&e("|| F T")), t);
+	assert_eq!(eval_lambda(&e("|| T F")), t);
+	assert_eq!(eval_lambda(&e("|| T T")), t);
 
-	assert_eq!(eval_lambda(&e("|| F F"), "bool"), "false");
-	assert_eq!(eval_lambda(&e("|| F T"), "bool"), "true");
-	assert_eq!(eval_lambda(&e("|| T F"), "bool"), "true");
-	assert_eq!(eval_lambda(&e("|| T T"), "bool"), "true");
+	assert_eq!(eval_lambda(&e("{:: expr } || F F")), f);
+	assert_eq!(eval_lambda(&e("{:: expr } || F T")), t);
+	assert_eq!(eval_lambda(&e("{:: expr } || T F")), t);
+	assert_eq!(eval_lambda(&e("{:: expr } || T T")), t);
+
+	assert_eq!(eval_lambda(&e("{:: bool } || F F")), "false");
+	assert_eq!(eval_lambda(&e("{:: bool } || F T")), "true");
+	assert_eq!(eval_lambda(&e("{:: bool } || T F")), "true");
+	assert_eq!(eval_lambda(&e("{:: bool } || T T")), "true");
 }
 
 #[wasm_bindgen_test]
@@ -41,15 +46,20 @@ fn test_and() {
 	let f = "\\a.\\b.b";
 	let t = "\\a.\\b.a";
 
-	assert_eq!(eval_lambda(&e("&& F F"), "expr"), f);
-	assert_eq!(eval_lambda(&e("&& F T"), "expr"), f);
-	assert_eq!(eval_lambda(&e("&& T F"), "expr"), f);
-	assert_eq!(eval_lambda(&e("&& T T"), "expr"), t);
+	assert_eq!(eval_lambda(&e("&& F F")), f);
+	assert_eq!(eval_lambda(&e("&& F T")), f);
+	assert_eq!(eval_lambda(&e("&& T F")), f);
+	assert_eq!(eval_lambda(&e("&& T T")), t);
 
-	assert_eq!(eval_lambda(&e("&& F F"), "bool"), "false");
-	assert_eq!(eval_lambda(&e("&& F T"), "bool"), "false");
-	assert_eq!(eval_lambda(&e("&& T F"), "bool"), "false");
-	assert_eq!(eval_lambda(&e("&& T T"), "bool"), "true");
+	assert_eq!(eval_lambda(&e("{:: expr } && F F")), f);
+	assert_eq!(eval_lambda(&e("{:: expr } && F T")), f);
+	assert_eq!(eval_lambda(&e("{:: expr } && T F")), f);
+	assert_eq!(eval_lambda(&e("{:: expr } && T T")), t);
+
+	assert_eq!(eval_lambda(&e("{:: bool } && F F")), "false");
+	assert_eq!(eval_lambda(&e("{:: bool } && F T")), "false");
+	assert_eq!(eval_lambda(&e("{:: bool } && T F")), "false");
+	assert_eq!(eval_lambda(&e("{:: bool } && T T")), "true");
 }
 
 fn make_church_num(n: usize) -> String {
@@ -91,12 +101,13 @@ fn test_succ() {
 	for n in 0..100 {
 		let n_expr = make_church_num(n);
 		let succ_expr = make_church_num(n + 1);
+		assert_eq!(eval_lambda(&format!("succ ({n_expr})\n{defs}")), succ_expr);
 		assert_eq!(
-			eval_lambda(&format!("succ ({n_expr})\n{defs}"), "expr"),
+			eval_lambda(&format!("{{:: expr}} succ ({n_expr})\n{defs}")),
 			succ_expr
 		);
 		assert_eq!(
-			eval_lambda(&format!("succ ({n_expr})\n{defs}"), "church"),
+			eval_lambda(&format!("{{:: church }} succ ({n_expr})\n{defs}")),
 			(n + 1).to_string()
 		);
 	}
@@ -115,11 +126,15 @@ fn test_plus() {
 			let m_expr = make_church_num(m);
 			let sum_expr = make_church_num(n + m);
 			assert_eq!(
-				eval_lambda(&format!("+ ({n_expr}) ({m_expr})\n{defs}"), "expr"),
+				eval_lambda(&format!("+ ({n_expr}) ({m_expr})\n{defs}")),
 				sum_expr
 			);
 			assert_eq!(
-				eval_lambda(&format!("+ ({n_expr}) ({m_expr})\n{defs}"), "church"),
+				eval_lambda(&format!("{{:: expr }} + ({n_expr}) ({m_expr})\n{defs}")),
+				sum_expr
+			);
+			assert_eq!(
+				eval_lambda(&format!("{{:: church }} + ({n_expr}) ({m_expr})\n{defs}")),
 				(n + m).to_string()
 			);
 		}

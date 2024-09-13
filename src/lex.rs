@@ -10,6 +10,7 @@ pub enum Token {
 	Where,
 	Def,
 	End,
+	Comment(String),
 }
 
 pub struct TokenStream {
@@ -34,11 +35,23 @@ impl TokenStream {
 	pub fn all(&self) -> Vec<Token> {
 		self.tokens.iter().cloned().collect()
 	}
+
+	pub fn remove_comments(&mut self) {
+		self.tokens = self
+			.tokens
+			.iter()
+			.filter(|t| match t {
+				Token::Comment(_) => false,
+				_ => true,
+			})
+			.cloned()
+			.collect();
+	}
 }
 
 const IDENT_SPECIAL_CHARS: [char; 25] = [
-	'~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '-', '_', '+', '[', ']', '|', ':',
-	';', '\'', '"', ',', '<', '>', '/', '?',
+	'~', '`', '!', '@', '#', '$', '%', '^', '&', '*', '-', '_', '+', '[', ']', '|', ':', ';', '\'',
+	'"', ',', '<', '>', '/', '?',
 ];
 
 pub fn lex(code: &str) -> TokenStream {
@@ -58,20 +71,22 @@ pub fn lex(code: &str) -> TokenStream {
 			')' => {
 				tokens.push_back(Token::Rpar);
 			}
-			'=' => {
-				tokens.push_back(Token::Def)
-			}
+			'=' => tokens.push_back(Token::Def),
 			'{' => {
 				let mut n: usize = 0;
+				let mut s: Vec<char> = Vec::new();
 				loop {
-					match chars.next() {
+					let c = chars.next();
+					match c {
 						Some('}') if n == 0 => break,
 						Some('}') => n -= 1,
 						Some('{') => n += 1,
 						None => panic!("Unclosed comment"),
-						_ => {},
+						_ => {}
 					}
+					s.push(c.unwrap());
 				}
+				tokens.push_back(Token::Comment(s.iter().collect::<String>()));
 			}
 			c if is_ident_char(&c) => {
 				let name = lex_ident(c, &mut chars);
@@ -115,12 +130,21 @@ mod lex_tests {
 
 	#[test]
 	fn lex_comment() -> () {
-		assert_eq!(vec![Token::Lambda], lex(r#"{ Hello there! } \"#).all())
+		assert_eq!(
+			vec![Token::Comment(" Hello there! ".to_owned()), Token::Lambda],
+			lex(r#"{ Hello there! } \"#).all()
+		)
 	}
 
 	#[test]
 	fn lex_nested_comments() -> () {
-		assert_eq!(vec![Token::Lambda], lex(r#"{ Outside { Inside } Outside } \"#).all())
+		assert_eq!(
+			vec![
+				Token::Comment(" Outside { Inside } Outside ".to_owned()),
+				Token::Lambda
+			],
+			lex(r#"{ Outside { Inside } Outside } \"#).all()
+		)
 	}
 
 	#[test]

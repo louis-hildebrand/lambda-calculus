@@ -1,3 +1,4 @@
+{:: bool }
   ! F
 { ! T }
 where ! = \x.x F T

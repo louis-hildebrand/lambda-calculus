@@ -9,6 +9,18 @@ pub enum Expr {
 	Var(String),
 }
 
+pub fn find_type_annotation(tokens: &mut TokenStream) -> Option<String> {
+	loop {
+		match tokens.next() {
+			Token::End => return None,
+			Token::Comment(s) if s.starts_with("::") => {
+				return Some(s.strip_prefix("::").unwrap().trim().to_owned())
+			}
+			_ => (),
+		}
+	}
+}
+
 pub fn parse(tokens: &mut TokenStream) -> Box<Expr> {
 	let e = parse_e(tokens);
 	let decls = parse_decls(tokens);
@@ -124,7 +136,7 @@ fn inline(e: &Expr, decls: &HashMap<&String, Box<Expr>>) -> Box<Expr> {
 			e_stack.push((true, e));
 		}
 		match (visited, e) {
-			(false, Expr::Var(_)) => {},
+			(false, Expr::Var(_)) => {}
 			(false, Expr::Fun(x, body)) => {
 				arg_stack.push(x);
 				e_stack.push((false, body));
@@ -132,7 +144,7 @@ fn inline(e: &Expr, decls: &HashMap<&String, Box<Expr>>) -> Box<Expr> {
 			(false, Expr::App(e1, e2)) => {
 				e_stack.push((false, e2));
 				e_stack.push((false, e1));
-			},
+			}
 			(true, Expr::Var(name)) => {
 				let e = if arg_stack.contains(&name) {
 					Expr::Var(name.clone())
@@ -158,10 +170,10 @@ fn inline(e: &Expr, decls: &HashMap<&String, Box<Expr>>) -> Box<Expr> {
 			(true, Expr::App(_, _)) => {
 				let (e1, e2) = match (result_stack.pop(), result_stack.pop()) {
 					(Some(e2), Some(e1)) => (e1, e2),
-					_ => panic!("Missing result for function application")
+					_ => panic!("Missing result for function application"),
 				};
 				result_stack.push(Box::new(Expr::App(e1, e2)));
-			},
+			}
 		}
 	}
 	result_stack.pop().unwrap()

@@ -1,3 +1,4 @@
+{:: church }
   if F 6 0           { output: 0 }
 { if T 6 0 }         { output: 6 }
 { if (&& T F) 5 4 }  { output: 4 }

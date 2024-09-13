@@ -1,7 +1,7 @@
+{:: church }
 + 4 2
 where    + = \m.\n.m succ n
 where succ = \n.\s.\z.s (n s z)
-
 where 0 = \s.\z.z
 where 1 = \s.\z.s(z)
 where 2 = \s.\z.s(s(z))
