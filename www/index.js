@@ -1,47 +1,52 @@
 import * as lambda from "lambda";
 
 const BASE_URL = getBaseUrl();
+const DESCRIPTION_ELEM = document.getElementById("exercise-description");
+const INPUT_TEXTAREA = document.getElementById("input-block");
+const OUTPUT_TEXTAREA = document.getElementById("output-block");
+const EVAL_BTN = document.getElementById("eval-btn");
+const CLEAR_BTN = document.getElementById("clear-btn");
+const SHOW_ANSWER_BTN = document.getElementById("show-answer-btn");
 
 const url = new URL(window.location.href);
 
 const exercise = await getExercise(url.searchParams.get("ex"));
 if (exercise) {
-	document.getElementById("exercise-description").innerHTML = exercise.description;
-	const showAnswerBtn = document.getElementById("show-answer-btn");
+	DESCRIPTION_ELEM.innerHTML = exercise.description;
 	if (exercise.answer) {
-		showAnswerBtn.style.visibility = "visible";
-		showAnswerBtn.addEventListener("click", () => {
-			document.getElementById("input-block").value = exercise.answer;
+		SHOW_ANSWER_BTN.style.visibility = "visible";
+		SHOW_ANSWER_BTN.addEventListener("click", () => {
+			INPUT_TEXTAREA.value = exercise.answer;
 		});
 	} else {
-		showAnswerBtn.style.visibility = "hidden";
+		SHOW_ANSWER_BTN.style.visibility = "hidden";
 	}
 } else {
 	url.searchParams.delete("ex");
 	window.history.replaceState(null, null, url);
-	document.getElementById("input-block").value = `succ n
+	INPUT_TEXTAREA.value = `succ n
 where succ = \\n.\\s.\\z.s(n s z)
 where    n = \\s.\\z.s(s(s(z))) { 3 }`;
 }
 
-document.getElementById("input-block").addEventListener("keydown", (e) => {
+INPUT_TEXTAREA.addEventListener("keydown", (e) => {
 	if (e.ctrlKey && e.key === "Enter") {
 		evaluateExpression();
 	}
 });
 
-document.getElementById("eval-btn").addEventListener("click", () => {
+EVAL_BTN.addEventListener("click", () => {
 	evaluateExpression();
 });
 
-document.getElementById("clear-btn").addEventListener("click", () => {
-	document.getElementById("input-block").value = "";
+CLEAR_BTN.addEventListener("click", () => {
+	INPUT_TEXTAREA.value = "";
 });
 
 function evaluateExpression() {
-	document.getElementById("output-block").value = "...";
-	const e = document.getElementById("input-block").value;
-	document.getElementById("output-block").value = lambda.eval_lambda(e);
+	OUTPUT_TEXTAREA.value = "...";
+	const e = INPUT_TEXTAREA.value;
+	OUTPUT_TEXTAREA.value = lambda.eval_lambda(e);
 }
 
 function getBaseUrl() {
