@@ -13,6 +13,7 @@ module.exports = {
     new CopyWebpackPlugin([
       "about.html",
       "exercises.html",
+      "favicon.ico",
       "index.html",
       "index.css",
       { from: "exercises", to: "exercises" }])
