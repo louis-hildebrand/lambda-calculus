@@ -24,15 +24,25 @@ where succ = \\n.\\s.\\z.s(n s z)
 where    n = \\s.\\z.s(s(s(z))) { 3 }`;
 }
 
+document.getElementById("input-block").addEventListener("keydown", (e) => {
+	if (e.ctrlKey && e.key === "Enter") {
+		evaluateExpression();
+	}
+});
+
 document.getElementById("eval-btn").addEventListener("click", () => {
-	document.getElementById("output-block").value = "...";
-	const e = document.getElementById("input-block").value;
-	document.getElementById("output-block").value = lambda.eval_lambda(e);
+	evaluateExpression();
 });
 
 document.getElementById("clear-btn").addEventListener("click", () => {
 	document.getElementById("input-block").value = "";
 });
+
+function evaluateExpression() {
+	document.getElementById("output-block").value = "...";
+	const e = document.getElementById("input-block").value;
+	document.getElementById("output-block").value = lambda.eval_lambda(e);
+}
 
 function getBaseUrl() {
 	let origin = window.location.origin;
