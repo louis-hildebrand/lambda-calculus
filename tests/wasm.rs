@@ -140,3 +140,30 @@ fn test_plus() {
 		}
 	}
 }
+
+#[wasm_bindgen_test]
+fn test_tuple() {
+	let e = "
+		\\s.s T (\\s.s (\\x.x x) F) 2
+		where T = \\t.\\f.t
+		where F = \\t.\\f.f
+		where 2 = \\s.\\z.s(s(z))"
+		.trim();
+
+	let evaluated = "\\a.a (\\b.\\c.b) (\\b.b (\\c.c c) (\\c.\\d.d)) (\\b.\\c.b (b c))";
+	assert_eq!(eval_lambda(e), evaluated);
+
+	let evaluated_as_tuple_exprs = "(\\b.\\c.b, \\b.b (\\c.c c) (\\c.\\d.d), \\b.\\c.b (b c))";
+	assert_eq!(
+		eval_lambda(&format!("{{:: tuple[expr, expr, expr] }}\n{e}")),
+		evaluated_as_tuple_exprs
+	);
+
+	let evaluated_as_tuple = "(true, (\\c.c c, false), 2)";
+	assert_eq!(
+		eval_lambda(&format!(
+			"{{:: tuple[bool, tuple[expr, bool], church] }}\n{e}"
+		)),
+		evaluated_as_tuple
+	);
+}
