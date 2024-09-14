@@ -1,0 +1,5 @@
+t ::= "expr"
+    | "bool"
+    | "church"
+    | "tuple" "[" ( t "," )* t "]"
+    | "tuple" "[" "]"

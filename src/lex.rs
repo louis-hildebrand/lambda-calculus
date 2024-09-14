@@ -5,6 +5,10 @@ pub enum TypeToken {
 	Expr,
 	Bool,
 	Church,
+	Tuple,
+	LeftSquareBracket,
+	RightSquareBracket,
+	Comma,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -61,6 +65,9 @@ pub fn lex_type(dt: &str) -> Vec<TypeToken> {
 	let mut tokens: Vec<TypeToken> = Vec::new();
 	while let Some(c) = chars.next() {
 		match c {
+			'[' => tokens.push(TypeToken::LeftSquareBracket),
+			']' => tokens.push(TypeToken::RightSquareBracket),
+			',' => tokens.push(TypeToken::Comma),
 			c if c.is_whitespace() => {}
 			c if c.is_ascii_alphabetic() => {
 				let mut ident_chars = vec![c];
@@ -78,6 +85,7 @@ pub fn lex_type(dt: &str) -> Vec<TypeToken> {
 					"expr" => TypeToken::Expr,
 					"bool" => TypeToken::Bool,
 					"church" => TypeToken::Church,
+					"tuple" => TypeToken::Tuple,
 					s => panic!("Invalid type identifier: {s}"),
 				};
 				tokens.push(tok);
@@ -183,8 +191,71 @@ mod lex_type_tests {
 	}
 
 	#[test]
+	fn test_lex_1_tuple() {
+		assert_eq!(
+			lex_type("tuple[expr]"),
+			vec![
+				TypeToken::Tuple,
+				TypeToken::LeftSquareBracket,
+				TypeToken::Expr,
+				TypeToken::RightSquareBracket
+			]
+		);
+	}
+
+	#[test]
+	fn test_lex_2_tuple() {
+		assert_eq!(
+			lex_type("tuple [ bool , church ]"),
+			vec![
+				TypeToken::Tuple,
+				TypeToken::LeftSquareBracket,
+				TypeToken::Bool,
+				TypeToken::Comma,
+				TypeToken::Church,
+				TypeToken::RightSquareBracket
+			]
+		);
+	}
+
+	#[test]
+	fn test_lex_empty_tuple() {
+		assert_eq!(
+			lex_type("tuple[]"),
+			vec![
+				TypeToken::Tuple,
+				TypeToken::LeftSquareBracket,
+				TypeToken::RightSquareBracket
+			]
+		);
+	}
+
+	#[test]
+	fn test_lex_nested_tuple() {
+		assert_eq!(
+			lex_type("tuple[expr, tuple[bool, tuple[church]]]"),
+			vec![
+				TypeToken::Tuple,
+				TypeToken::LeftSquareBracket,
+				TypeToken::Expr,
+				TypeToken::Comma,
+				TypeToken::Tuple,
+				TypeToken::LeftSquareBracket,
+				TypeToken::Bool,
+				TypeToken::Comma,
+				TypeToken::Tuple,
+				TypeToken::LeftSquareBracket,
+				TypeToken::Church,
+				TypeToken::RightSquareBracket,
+				TypeToken::RightSquareBracket,
+				TypeToken::RightSquareBracket
+			]
+		);
+	}
+
+	#[test]
 	#[should_panic(expected = "Invalid type identifier: boo")]
-	fn test_lex_invalid() {
+	fn test_lex_invalid_type_identifier() {
 		lex_type("boo");
 	}
 
