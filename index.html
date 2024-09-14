@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Lambda Calculus</title>
+		<link href="./index.css" rel="stylesheet">
+		<link href="./favicon.ico" rel="icon" type="image/x-icon">
+	</head>
+	<body>
+		<header>
+			<span id="logo">&#x03bb;</span>
+			<a href="./about.html">About</a>
+			<a href="./exercises.html">Exercises</a>
+			<a href="./">Interpreter</a>
+		</header>
+		<main id="interpreter-main">
+			<noscript>
+				This page contains WebAssembly and JavaScript content.
+				Please enable JavaScript in your browser.
+			</noscript>
+			<script src="./bootstrap.js"></script>
+			<div id="exercise-description"></div>
+			<textarea id="input-block"></textarea>
+			<div>
+				<button id="eval-btn">Evaluate</button>
+				<button id="clear-btn">Clear</button>
+				<button id="show-answer-btn" style="visibility: hidden;">Show answer</button>
+			</div>
+			<textarea id="output-block" readonly></textarea>
+		</main>
+	</body>
+</html>

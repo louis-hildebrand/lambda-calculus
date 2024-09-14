@@ -1,0 +1,12 @@
+<p>
+	In the lambda calculus, natural numbers (0, 1, 2, and so on) are typically represented as <a href="https://en.wikipedia.org/wiki/Church_encoding">Church numerals</a>.
+	In this encoding:
+</p>
+<ul>
+	<li><code>0 = \s.\z.z</code></li>
+	<li><code>1 = \s.\z.s(z)</code></li>
+	<li><code>2 = \s.\z.s(s(z))</code></li>
+	<li><code>3 = \s.\z.s(s(s(z)))</code></li>
+</ul>
+<p>and so on.</p>
+<p>Try writing a few larger natural numbers and evaluate them, interpreting the result as a Church numeral.</p>
