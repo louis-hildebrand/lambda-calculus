@@ -1,5 +1,12 @@
 use std::{collections::VecDeque, iter::Peekable, str::Chars};
 
+#[derive(Debug, PartialEq)]
+pub enum TypeToken {
+	Expr,
+	Bool,
+	Church,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Token {
 	Lambda,
@@ -47,6 +54,38 @@ impl TokenStream {
 			.cloned()
 			.collect();
 	}
+}
+
+pub fn lex_type(dt: &str) -> Vec<TypeToken> {
+	let mut chars = dt.chars().peekable();
+	let mut tokens: Vec<TypeToken> = Vec::new();
+	while let Some(c) = chars.next() {
+		match c {
+			c if c.is_whitespace() => {}
+			c if c.is_ascii_alphabetic() => {
+				let mut ident_chars = vec![c];
+				loop {
+					match chars.peek() {
+						Some(&c) if c.is_ascii_alphabetic() => {
+							ident_chars.push(c);
+							chars.next();
+						}
+						_ => break,
+					}
+				}
+				let s = ident_chars.iter().collect::<String>();
+				let tok = match s.as_str() {
+					"expr" => TypeToken::Expr,
+					"bool" => TypeToken::Bool,
+					"church" => TypeToken::Church,
+					s => panic!("Invalid type identifier: {s}"),
+				};
+				tokens.push(tok);
+			}
+			_ => panic!("Invalid character in type: {c}"),
+		}
+	}
+	tokens
 }
 
 const IDENT_SPECIAL_CHARS: [char; 25] = [
@@ -122,6 +161,38 @@ fn lex_ident(first: char, chars: &mut Peekable<Chars>) -> String {
 
 fn is_ident_char(c: &char) -> bool {
 	c.is_alphanumeric() || IDENT_SPECIAL_CHARS.contains(&c)
+}
+
+#[cfg(test)]
+mod lex_type_tests {
+	use crate::lex::*;
+
+	#[test]
+	fn test_lex_expr() {
+		assert_eq!(lex_type("expr"), vec![TypeToken::Expr]);
+	}
+
+	#[test]
+	fn test_lex_bool() {
+		assert_eq!(lex_type("bool"), vec![TypeToken::Bool]);
+	}
+
+	#[test]
+	fn test_lex_church() {
+		assert_eq!(lex_type("church"), vec![TypeToken::Church]);
+	}
+
+	#[test]
+	#[should_panic(expected = "Invalid type identifier: boo")]
+	fn test_lex_invalid() {
+		lex_type("boo");
+	}
+
+	#[test]
+	#[should_panic(expected = "Invalid character in type: (")]
+	fn test_lex_invalid_character() {
+		lex_type("bool()");
+	}
 }
 
 #[cfg(test)]

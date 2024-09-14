@@ -1,6 +1,7 @@
+use crate::lex::{lex_type, TypeToken};
 use crate::parse::Expr;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DataType {
 	Expr,
 	Boolean,
@@ -11,11 +12,14 @@ impl TryFrom<&str> for DataType {
 	type Error = ();
 
 	fn try_from(value: &str) -> Result<Self, Self::Error> {
-		match value {
-			"expr" => Ok(DataType::Expr),
-			"bool" => Ok(DataType::Boolean),
-			"church" => Ok(DataType::ChurchNumeral),
-			_ => Err(()),
+		let tokens = lex_type(value);
+		if tokens.len() != 1 {
+			return Err(());
+		}
+		match tokens.first().unwrap() {
+			TypeToken::Expr => Ok(DataType::Expr),
+			TypeToken::Bool => Ok(DataType::Boolean),
+			TypeToken::Church => Ok(DataType::ChurchNumeral),
 		}
 	}
 }
@@ -66,6 +70,36 @@ fn interpret_as_church(e: &Expr) -> Result<String, ()> {
 			_ => Err(()),
 		},
 		_ => Err(()),
+	}
+}
+
+#[cfg(test)]
+mod parse_tests {
+	use crate::interpret_as::DataType;
+
+	#[test]
+	fn test_parse_expr() {
+		assert_eq!(DataType::try_from("expr"), Ok(DataType::Expr));
+	}
+
+	#[test]
+	fn test_parse_bool() {
+		assert_eq!(DataType::try_from("bool"), Ok(DataType::Boolean));
+	}
+
+	#[test]
+	fn test_parse_church() {
+		assert_eq!(DataType::try_from("church"), Ok(DataType::ChurchNumeral));
+	}
+
+	#[test]
+	fn test_parse_empty() {
+		assert_eq!(DataType::try_from(""), Err(()));
+	}
+
+	#[test]
+	fn test_parse_bool_bool() {
+		assert_eq!(DataType::try_from("bool bool"), Err(()));
 	}
 }
 
