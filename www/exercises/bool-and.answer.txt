@@ -1,8 +1,6 @@
-{:: bool }
-  && F F
-{ && F T }
-{ && T F }
-{ && T T }
+{:: tuple[bool, bool, bool, bool] }
+{ Expected output: (false, false, false, true) }
+\s.s (&& F F) (&& F T) (&& T F) (&& T T)
 where && = \a.\b.a b F
 where  F = \t.\f.f
 where  T = \t.\f.t

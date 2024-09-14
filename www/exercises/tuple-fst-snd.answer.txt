@@ -1,0 +1,6 @@
+{:: tuple[tuple[expr, expr], expr, expr] }
+{ Expected output: ((\c.\d.c d, \c.\d.d), \b.\c.b c, \b.\c.c) }
+\s.s (tup) (fst tup) (snd tup)
+where fst = \t.t (\a.\b.a)
+where snd = \t.t (\a.\b.b)
+where tup = \s.s (\s.\z.s(z)) (\s.\z.z)

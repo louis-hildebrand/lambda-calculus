@@ -1,8 +1,6 @@
-{:: church }
-  if F 6 0           { output: 0 }
-{ if T 6 0 }         { output: 6 }
-{ if (&& T F) 5 4 }  { output: 4 }
-{ if (|| T F) 5 4 }  { output: 5 }
+{:: tuple[church, church, church, church] }
+{ Expected output: (0, 6, 4, 5) }
+\s.s (if F 6 0) (if T 6 0) (if (&& T F) 5 4) (if (|| T F) 5 4)
 where if = \c.\t.\f.c t f
 where && = \a.\b.a b F
 where || = \a.\b.a T b
