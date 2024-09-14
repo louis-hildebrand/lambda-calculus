@@ -61,7 +61,12 @@ main {
 
 /* Other style -------------------------------------------------------------- */
 
+html {
+	font-family: 'Calibri', sans-serif;
+}
+
 #logo {
+	font-family: 'Ubuntu Mono', 'Calibri', sans-serif;
 	font-size: xx-large;
 }
 
