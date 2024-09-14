@@ -6,6 +6,7 @@ pub enum TypeToken {
 	Bool,
 	Church,
 	Tuple,
+	List,
 	LeftSquareBracket,
 	RightSquareBracket,
 	Comma,
@@ -86,6 +87,7 @@ pub fn lex_type(dt: &str) -> Vec<TypeToken> {
 					"bool" => TypeToken::Bool,
 					"church" => TypeToken::Church,
 					"tuple" => TypeToken::Tuple,
+					"list" => TypeToken::List,
 					s => panic!("Invalid type identifier: {s}"),
 				};
 				tokens.push(tok);
@@ -248,6 +250,19 @@ mod lex_type_tests {
 				TypeToken::Church,
 				TypeToken::RightSquareBracket,
 				TypeToken::RightSquareBracket,
+				TypeToken::RightSquareBracket
+			]
+		);
+	}
+
+	#[test]
+	fn test_lex_list() {
+		assert_eq!(
+			lex_type("list[church]"),
+			vec![
+				TypeToken::List,
+				TypeToken::LeftSquareBracket,
+				TypeToken::Church,
 				TypeToken::RightSquareBracket
 			]
 		);

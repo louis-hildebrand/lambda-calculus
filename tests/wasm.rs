@@ -167,3 +167,28 @@ fn test_tuple() {
 		evaluated_as_tuple
 	);
 }
+
+#[wasm_bindgen_test]
+fn test_list_bool() {
+	let e = "
+		cons T (cons F (cons F nil))
+		where cons = \\h.\\t.(\\s.s h t)
+		where  nil = \\_.T
+		where    T = \\t.\\f.t
+		where    F = \\t.\\f.f"
+		.trim();
+
+	let evaluated = "\\a.a (\\b.\\c.b) (\\b.b (\\c.\\d.d) (\\c.c (\\d.\\e.e) (\\d.\\e.\\f.e)))";
+	assert_eq!(eval_lambda(e), evaluated);
+
+	let evaluated_as_list_expr = "[\\b.\\c.b, \\c.\\d.d, \\d.\\e.e]";
+	assert_eq!(
+		eval_lambda(&format!("{{:: list[expr] }}\n{e}")),
+		evaluated_as_list_expr
+	);
+
+	assert_eq!(
+		eval_lambda(&format!("{{:: list[bool] }}\n{e}")),
+		"[true, false, false]"
+	);
+}

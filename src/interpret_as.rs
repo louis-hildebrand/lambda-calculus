@@ -11,6 +11,7 @@ pub enum DataType {
 	Boolean,
 	ChurchNumeral,
 	Tuple(Vec<DataType>),
+	List(Box<DataType>),
 }
 
 impl TryFrom<&str> for DataType {
@@ -37,6 +38,7 @@ fn parse_type(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataType, ()> {
 		Some(TypeToken::Bool) => Ok(DataType::Boolean),
 		Some(TypeToken::Church) => Ok(DataType::ChurchNumeral),
 		Some(TypeToken::Tuple) => parse_tuple_contents(tokens),
+		Some(TypeToken::List) => parse_list_contents(tokens),
 	}
 }
 
@@ -64,21 +66,35 @@ fn parse_tuple_contents(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataTy
 	}
 }
 
+fn parse_list_contents(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataType, ()> {
+	match tokens.next() {
+		Some(TypeToken::LeftSquareBracket) => (),
+		_ => return Err(()),
+	};
+	let t = parse_type(tokens)?;
+	match tokens.next() {
+		Some(TypeToken::RightSquareBracket) => (),
+		_ => return Err(()),
+	};
+	Ok(DataType::List(Box::new(t)))
+}
+
 pub fn interpret_as(e: &Expr, dt: &DataType) -> Result<String, ()> {
 	match dt {
 		DataType::Expr => Ok(e.to_string()),
 		DataType::Boolean => interpret_as_bool(e),
 		DataType::ChurchNumeral => interpret_as_church(e),
 		DataType::Tuple(elem_types) => interpret_as_tuple(e, elem_types),
+		DataType::List(t) => interpret_as_list(e, t),
 	}
 }
 
 fn interpret_as_bool(e: &Expr) -> Result<String, ()> {
 	match e {
-		Expr::Fun(a, body) => match body.as_ref() {
-			Expr::Fun(b, body) => match body.as_ref() {
-				Expr::Var(c) if c == a => Ok("true".to_owned()),
-				Expr::Var(c) if c == b => Ok("false".to_owned()),
+		Expr::Fun(t, body) => match body.as_ref() {
+			Expr::Fun(f, body) => match body.as_ref() {
+				Expr::Var(c) if c == t => Ok("true".to_owned()),
+				Expr::Var(c) if c == f => Ok("false".to_owned()),
 				_ => Err(()),
 			},
 			_ => Err(()),
@@ -116,13 +132,13 @@ fn interpret_as_church(e: &Expr) -> Result<String, ()> {
 
 fn interpret_as_tuple(e: &Expr, elem_types: &Vec<DataType>) -> Result<String, ()> {
 	match e {
-		Expr::Fun(t, body) => {
+		Expr::Fun(s, body) => {
 			let mut ets = elem_types.clone();
 			let mut e = body;
 			let mut elems: VecDeque<String> = VecDeque::new();
 			loop {
 				match (ets.last(), e.as_ref()) {
-					(None, Expr::Var(p)) if p == t => break,
+					(None, Expr::Var(p)) if p == s => break,
 					(Some(dt), Expr::App(lhs, rhs)) => {
 						let elem = interpret_as(rhs, dt)?;
 						elems.push_front(elem);
@@ -135,6 +151,52 @@ fn interpret_as_tuple(e: &Expr, elem_types: &Vec<DataType>) -> Result<String, ()
 			Ok(format!("({})", Vec::from(elems).join(", ")))
 		}
 		_ => Err(()),
+	}
+}
+
+fn interpret_as_list(e: &Expr, dt: &DataType) -> Result<String, ()> {
+	Ok(format!("[{}]", interpret_as_list_without_brackets(e, dt)?))
+}
+
+fn interpret_as_list_without_brackets(e: &Expr, dt: &DataType) -> Result<String, ()> {
+	match e {
+		_ if is_nil(e) => Ok("".to_owned()),
+		Expr::Fun(s, body) => match body.as_ref() {
+			Expr::App(lhs, tail) => match lhs.as_ref() {
+				Expr::App(p, head) => match p.as_ref() {
+					Expr::Var(p) if p == s => {
+						let head_str = interpret_as(head, dt)?;
+						let tail_str = interpret_as_list_without_brackets(tail, dt)?;
+						if tail_str.trim().is_empty() {
+							Ok(head_str)
+						} else {
+							Ok(format!("{head_str}, {tail_str}"))
+						}
+					}
+					_ => Err(()),
+				},
+				_ => Err(()),
+			},
+			_ => Err(()),
+		},
+		_ => Err(()),
+	}
+}
+
+fn is_nil(e: &Expr) -> bool {
+	match e {
+		Expr::Fun(_, body) => match body.as_ref() {
+			// Check if body is true
+			Expr::Fun(t, body) => match body.as_ref() {
+				Expr::Fun(_, body) => match body.as_ref() {
+					Expr::Var(c) if c == t => true,
+					_ => false,
+				},
+				_ => false,
+			},
+			_ => false,
+		},
+		_ => false,
 	}
 }
 
@@ -207,6 +269,22 @@ mod parse_tests {
 					DataType::Tuple(vec![DataType::ChurchNumeral])
 				])
 			]))
+		);
+	}
+
+	#[test]
+	fn test_parse_list_bool() {
+		assert_eq!(
+			DataType::try_from("list[bool]"),
+			Ok(DataType::List(Box::new(DataType::Boolean)))
+		);
+	}
+
+	#[test]
+	fn test_parse_list_church() {
+		assert_eq!(
+			DataType::try_from("list[church]"),
+			Ok(DataType::List(Box::new(DataType::ChurchNumeral)))
 		);
 	}
 
@@ -420,5 +498,62 @@ mod interpret_as_tests {
 		let e = parse("\\s.s (\\t.\\f.f) (\\t.\\f.t)");
 		let dt = DataType::Tuple(vec![DataType::Boolean]);
 		assert_eq!(interpret_as(&e, &dt), Err(()));
+	}
+
+	#[test]
+	fn test_interpret_as_list_nil() {
+		assert_eq!(
+			interpret_as(
+				&parse("\\_.T where T = \\t.\\f.t"),
+				&DataType::List(Box::new(DataType::Expr))
+			),
+			Ok("[]".to_owned())
+		);
+	}
+
+	#[test]
+	fn test_interpret_as_list_bool() {
+		let dt = DataType::List(Box::new(DataType::Boolean));
+		let t = "\\t.\\f.t";
+		let f = "\\t.\\f.f";
+		let mut e = format!("\\_.{t}");
+		assert_eq!(interpret_as(&parse(&e), &dt), Ok("[]".to_owned()));
+		e = format!("\\s.s ({t}) ({e})");
+		assert_eq!(interpret_as(&parse(&e), &dt), Ok("[true]".to_owned()));
+		e = format!("\\s.s ({f}) ({e})");
+		assert_eq!(
+			interpret_as(&parse(&e), &dt),
+			Ok("[false, true]".to_owned())
+		);
+		e = format!("\\s.s ({t}) ({e})");
+		assert_eq!(
+			interpret_as(&parse(&e), &dt),
+			Ok("[true, false, true]".to_owned())
+		);
+		e = format!("\\s.s ({t}) ({e})");
+		assert_eq!(
+			interpret_as(&parse(&e), &dt),
+			Ok("[true, true, false, true]".to_owned())
+		);
+	}
+
+	#[test]
+	fn test_interpret_as_list_church() {
+		let dt = DataType::List(Box::new(DataType::ChurchNumeral));
+		let mut e = format!("\\_.(\\t.\\f.t)");
+		assert_eq!(interpret_as(&parse(&e), &dt), Ok("[]".to_owned()));
+		e = format!("\\s.s (\\s.\\z.s(s(z))) ({e})");
+		assert_eq!(interpret_as(&parse(&e), &dt), Ok("[2]".to_owned()));
+		e = format!("\\s.s (\\s.\\z.s(z)) ({e})");
+		assert_eq!(interpret_as(&parse(&e), &dt), Ok("[1, 2]".to_owned()));
+		e = format!("\\s.s (\\s.\\z.z) ({e})");
+		assert_eq!(interpret_as(&parse(&e), &dt), Ok("[0, 1, 2]".to_owned()));
+		e = format!("\\s.s (\\s.\\z.s(z)) ({e})");
+		assert_eq!(interpret_as(&parse(&e), &dt), Ok("[1, 0, 1, 2]".to_owned()));
+		e = format!("\\s.s (\\s.\\z.s(s(z))) ({e})");
+		assert_eq!(
+			interpret_as(&parse(&e), &dt),
+			Ok("[2, 1, 0, 1, 2]".to_owned())
+		);
 	}
 }
