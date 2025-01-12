@@ -1,6 +1,7 @@
 # Lambda Calculus Interpreter
 
 An interpreter for the [untyped lambda calculus](https://en.wikipedia.org/wiki/Lambda_calculus).
+Access it at https://louis-hildebrand.github.io/lambda-calculus/.
 
 ## Syntax
 
@@ -10,6 +11,11 @@ It is mostly standard, except that:
 - For convenience, terms can be named using the `where` keyword. `where` bindings *cannot* be recursive and the term is simply substituted wherever the name appears.
 
 Anything starting with { and ending with } is considered a comment. Comments may be nested.
+
+For convenience, you can also provide a type for an expression and the interpreter will attempt to interpret the result as that type.
+This is done by adding a comment like `{:: THE_TYPE }`.
+For example, if you give the type `church` (i.e., a Church numeral) to the expression `\s.\z.s(s(z))`, the interpreter will output 2.
+The syntax for types in given in [grammar_types.txt](./grammar_types.txt).
 
 ## Examples
 
@@ -21,7 +27,7 @@ where 4    = succ (succ 2)
 where 2    = \s.\z.s(s(z))
 where succ = \n.\s.\z.s(n s z)
 
-{ RESULT: \s.\z.s(s(s(s(s(s(z))))))  [i.e., 6] }
+{ RESULT: \s.\z.s(s(s(s(s(s(z))))))  (i.e., 6) }
 ```
 
 ## Running on localhost

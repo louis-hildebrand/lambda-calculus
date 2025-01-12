@@ -24,9 +24,10 @@ if (exercise) {
 } else {
 	url.searchParams.delete("ex");
 	window.history.replaceState(null, null, url);
-	INPUT_TEXTAREA.value = `succ n
+	INPUT_TEXTAREA.value = `{:: church }
+succ 3
 where succ = \\n.\\s.\\z.s(n s z)
-where    n = \\s.\\z.s(s(s(z))) { 3 }`;
+where    3 = \\s.\\z.s(s(s(z))) { 3 }`;
 }
 
 INPUT_TEXTAREA.addEventListener("keydown", (e) => {
