@@ -1,3 +1,5 @@
+"use strict";
+
 import * as lambda from "lambda";
 
 const BASE_URL = getBaseUrl();
@@ -47,7 +49,13 @@ CLEAR_BTN.addEventListener("click", () => {
 function evaluateExpression() {
 	OUTPUT_TEXTAREA.value = "...";
 	const e = INPUT_TEXTAREA.value;
-	OUTPUT_TEXTAREA.value = lambda.eval_lambda(e);
+	try {
+		OUTPUT_TEXTAREA.classList.remove("error");
+		OUTPUT_TEXTAREA.value = lambda.eval_lambda(e);
+	} catch (e) {
+		OUTPUT_TEXTAREA.classList.add("error");
+		OUTPUT_TEXTAREA.value = e;
+	}
 }
 
 function getBaseUrl() {

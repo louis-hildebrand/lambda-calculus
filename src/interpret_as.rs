@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::iter::Peekable;
 use std::slice::Iter;
 
+use crate::error::Error;
 use crate::lex::{lex_type, TypeToken};
 use crate::parse::Expr;
 
@@ -15,25 +16,33 @@ pub enum DataType {
 }
 
 impl TryFrom<&str> for DataType {
-	type Error = ();
+	type Error = crate::error::Error;
 
 	fn try_from(value: &str) -> Result<Self, Self::Error> {
-		let token_vec = lex_type(value);
+		let token_vec = lex_type(value)?;
 		let mut tokens = token_vec.iter().peekable();
 		let t = parse_type(&mut tokens)?;
 		match tokens.next() {
 			None => Ok(t),
-			Some(_) => Err(()),
+			Some(t) => Err(Error::MalformedType(format!(
+				"unexpected token after end of type: \"{t}\""
+			))),
 		}
 	}
 }
 
-fn parse_type(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataType, ()> {
+fn parse_type(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataType, Error> {
 	match tokens.next() {
-		None => Err(()),
-		Some(TypeToken::LeftSquareBracket) => Err(()),
-		Some(TypeToken::RightSquareBracket) => Err(()),
-		Some(TypeToken::Comma) => Err(()),
+		None => Err(Error::MalformedType("unexpected end of type".to_owned())),
+		Some(TypeToken::LeftSquareBracket) => Err(Error::MalformedType(
+			"unexpected character: \"[\"".to_owned(),
+		)),
+		Some(TypeToken::RightSquareBracket) => Err(Error::MalformedType(
+			"unexpected character: \"]\"".to_owned(),
+		)),
+		Some(TypeToken::Comma) => Err(Error::MalformedType(
+			"unexpected character: \",\"".to_owned(),
+		)),
 		Some(TypeToken::Expr) => Ok(DataType::Expr),
 		Some(TypeToken::Bool) => Ok(DataType::Boolean),
 		Some(TypeToken::Church) => Ok(DataType::ChurchNumeral),
@@ -42,10 +51,19 @@ fn parse_type(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataType, ()> {
 	}
 }
 
-fn parse_tuple_contents(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataType, ()> {
+fn parse_tuple_contents(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataType, Error> {
 	match tokens.next() {
 		Some(TypeToken::LeftSquareBracket) => (),
-		_ => return Err(()),
+		Some(t) => {
+			return Err(Error::MalformedType(format!(
+				"expected next token in tuple type to be \"[\" but found \"{t}\""
+			)))
+		}
+		None => {
+			return Err(Error::MalformedType(
+				"expected next token in tuple type to be \"[\" but found nothing".to_owned(),
+			))
+		}
 	}
 	match tokens.peek() {
 		Some(TypeToken::RightSquareBracket) => {
@@ -61,20 +79,47 @@ fn parse_tuple_contents(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataTy
 		match tokens.next() {
 			Some(TypeToken::Comma) => continue,
 			Some(TypeToken::RightSquareBracket) => return Ok(DataType::Tuple(elem_types)),
-			_ => return Err(()),
+			Some(t) => {
+				return Err(Error::MalformedType(format!(
+					"expected next token in tuple type to be \",\" or \"]\" but found \"{t}\""
+				)))
+			}
+			None => {
+				return Err(Error::MalformedType(format!(
+					"expected next token in tuple type to be \",\" or \"]\" but found nothing"
+				)))
+			}
 		}
 	}
 }
 
-fn parse_list_contents(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataType, ()> {
+fn parse_list_contents(tokens: &mut Peekable<Iter<TypeToken>>) -> Result<DataType, Error> {
 	match tokens.next() {
 		Some(TypeToken::LeftSquareBracket) => (),
-		_ => return Err(()),
+		Some(t) => {
+			return Err(Error::MalformedType(format!(
+				"expected next token in list type to be \"[\" but found \"{t}\""
+			)))
+		}
+		None => {
+			return Err(Error::MalformedType(
+				"expected next token in list type to be \"[\" but found nothing".to_owned(),
+			))
+		}
 	};
 	let t = parse_type(tokens)?;
 	match tokens.next() {
 		Some(TypeToken::RightSquareBracket) => (),
-		_ => return Err(()),
+		Some(t) => {
+			return Err(Error::MalformedType(format!(
+				"expected next token in list type to be \"]\" but found \"{t}\""
+			)))
+		}
+		None => {
+			return Err(Error::MalformedType(
+				"expected next token in list type to be \"]\" but found nothing".to_owned(),
+			))
+		}
 	};
 	Ok(DataType::List(Box::new(t)))
 }
@@ -202,7 +247,7 @@ fn is_nil(e: &Expr) -> bool {
 
 #[cfg(test)]
 mod parse_tests {
-	use crate::interpret_as::DataType;
+	use crate::{error::Error, interpret_as::DataType};
 
 	#[test]
 	fn test_parse_expr() {
@@ -290,22 +335,62 @@ mod parse_tests {
 
 	#[test]
 	fn test_parse_empty() {
-		assert_eq!(DataType::try_from(""), Err(()));
+		assert_eq!(
+			DataType::try_from(""),
+			Err(Error::MalformedType("unexpected end of type".to_owned()))
+		);
 	}
 
 	#[test]
 	fn test_parse_bool_bool() {
-		assert_eq!(DataType::try_from("bool bool"), Err(()));
+		assert_eq!(
+			DataType::try_from("bool bool"),
+			Err(Error::MalformedType(
+				"unexpected token after end of type: \"bool\"".to_owned()
+			))
+		);
+	}
+
+	#[test]
+	fn test_parse_tuple_missing_types() {
+		assert_eq!(
+			DataType::try_from("tuple"),
+			Err(Error::MalformedType(
+				"expected next token in tuple type to be \"[\" but found nothing".to_owned()
+			))
+		)
 	}
 
 	#[test]
 	fn test_parse_tuple_unclosed_brackets() {
-		assert_eq!(DataType::try_from("tuple[bool, church"), Err(()));
+		assert_eq!(
+			DataType::try_from("tuple[bool, church"),
+			Err(Error::MalformedType(
+				"expected next token in tuple type to be \",\" or \"]\" but found nothing"
+					.to_owned()
+			))
+		);
+	}
+
+	#[test]
+	fn test_parse_tuple_missing_comma() {
+		assert_eq!(
+			DataType::try_from("tuple[bool church]"),
+			Err(Error::MalformedType(
+				"expected next token in tuple type to be \",\" or \"]\" but found \"church\""
+					.to_owned()
+			))
+		);
 	}
 
 	#[test]
 	fn test_parse_extra_bracket() {
-		assert_eq!(DataType::try_from("tuple[bool, bool]]"), Err(()));
+		assert_eq!(
+			DataType::try_from("tuple[bool, bool]]"),
+			Err(Error::MalformedType(
+				"unexpected token after end of type: \"]\"".to_owned()
+			))
+		);
 	}
 }
 
@@ -317,7 +402,7 @@ mod interpret_as_tests {
 	use crate::parse::Expr;
 
 	fn parse(e: &str) -> Box<Expr> {
-		let mut stream = lex::lex(e);
+		let mut stream = lex::lex(e).unwrap(); // TODO
 		parse::parse(&mut stream)
 	}
 

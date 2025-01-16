@@ -19,20 +19,20 @@ fn test_or() {
 	let f = "\\a.\\b.b";
 	let t = "\\a.\\b.a";
 
-	assert_eq!(eval_lambda(&e("|| F F")), f);
-	assert_eq!(eval_lambda(&e("|| F T")), t);
-	assert_eq!(eval_lambda(&e("|| T F")), t);
-	assert_eq!(eval_lambda(&e("|| T T")), t);
+	assert_eq!(eval_lambda(&e("|| F F")), Ok(f.to_owned()));
+	assert_eq!(eval_lambda(&e("|| F T")), Ok(t.to_owned()));
+	assert_eq!(eval_lambda(&e("|| T F")), Ok(t.to_owned()));
+	assert_eq!(eval_lambda(&e("|| T T")), Ok(t.to_owned()));
 
-	assert_eq!(eval_lambda(&e("{:: expr } || F F")), f);
-	assert_eq!(eval_lambda(&e("{:: expr } || F T")), t);
-	assert_eq!(eval_lambda(&e("{:: expr } || T F")), t);
-	assert_eq!(eval_lambda(&e("{:: expr } || T T")), t);
+	assert_eq!(eval_lambda(&e("{:: expr } || F F")), Ok(f.to_owned()));
+	assert_eq!(eval_lambda(&e("{:: expr } || F T")), Ok(t.to_owned()));
+	assert_eq!(eval_lambda(&e("{:: expr } || T F")), Ok(t.to_owned()));
+	assert_eq!(eval_lambda(&e("{:: expr } || T T")), Ok(t.to_owned()));
 
-	assert_eq!(eval_lambda(&e("{:: bool } || F F")), "false");
-	assert_eq!(eval_lambda(&e("{:: bool } || F T")), "true");
-	assert_eq!(eval_lambda(&e("{:: bool } || T F")), "true");
-	assert_eq!(eval_lambda(&e("{:: bool } || T T")), "true");
+	assert_eq!(eval_lambda(&e("{:: bool } || F F")), Ok("false".to_owned()));
+	assert_eq!(eval_lambda(&e("{:: bool } || F T")), Ok("true".to_owned()));
+	assert_eq!(eval_lambda(&e("{:: bool } || T F")), Ok("true".to_owned()));
+	assert_eq!(eval_lambda(&e("{:: bool } || T T")), Ok("true".to_owned()));
 }
 
 #[wasm_bindgen_test]
@@ -46,20 +46,20 @@ fn test_and() {
 	let f = "\\a.\\b.b";
 	let t = "\\a.\\b.a";
 
-	assert_eq!(eval_lambda(&e("&& F F")), f);
-	assert_eq!(eval_lambda(&e("&& F T")), f);
-	assert_eq!(eval_lambda(&e("&& T F")), f);
-	assert_eq!(eval_lambda(&e("&& T T")), t);
+	assert_eq!(eval_lambda(&e("&& F F")), Ok(f.to_owned()));
+	assert_eq!(eval_lambda(&e("&& F T")), Ok(f.to_owned()));
+	assert_eq!(eval_lambda(&e("&& T F")), Ok(f.to_owned()));
+	assert_eq!(eval_lambda(&e("&& T T")), Ok(t.to_owned()));
 
-	assert_eq!(eval_lambda(&e("{:: expr } && F F")), f);
-	assert_eq!(eval_lambda(&e("{:: expr } && F T")), f);
-	assert_eq!(eval_lambda(&e("{:: expr } && T F")), f);
-	assert_eq!(eval_lambda(&e("{:: expr } && T T")), t);
+	assert_eq!(eval_lambda(&e("{:: expr } && F F")), Ok(f.to_owned()));
+	assert_eq!(eval_lambda(&e("{:: expr } && F T")), Ok(f.to_owned()));
+	assert_eq!(eval_lambda(&e("{:: expr } && T F")), Ok(f.to_owned()));
+	assert_eq!(eval_lambda(&e("{:: expr } && T T")), Ok(t.to_owned()));
 
-	assert_eq!(eval_lambda(&e("{:: bool } && F F")), "false");
-	assert_eq!(eval_lambda(&e("{:: bool } && F T")), "false");
-	assert_eq!(eval_lambda(&e("{:: bool } && T F")), "false");
-	assert_eq!(eval_lambda(&e("{:: bool } && T T")), "true");
+	assert_eq!(eval_lambda(&e("{:: bool } && F F")), Ok("false".to_owned()));
+	assert_eq!(eval_lambda(&e("{:: bool } && F T")), Ok("false".to_owned()));
+	assert_eq!(eval_lambda(&e("{:: bool } && T F")), Ok("false".to_owned()));
+	assert_eq!(eval_lambda(&e("{:: bool } && T T")), Ok("true".to_owned()));
 }
 
 fn make_church_num(n: usize) -> String {
@@ -101,14 +101,17 @@ fn test_succ() {
 	for n in 0..100 {
 		let n_expr = make_church_num(n);
 		let succ_expr = make_church_num(n + 1);
-		assert_eq!(eval_lambda(&format!("succ ({n_expr})\n{defs}")), succ_expr);
+		assert_eq!(
+			eval_lambda(&format!("succ ({n_expr})\n{defs}")),
+			Ok(succ_expr.clone())
+		);
 		assert_eq!(
 			eval_lambda(&format!("{{:: expr}} succ ({n_expr})\n{defs}")),
-			succ_expr
+			Ok(succ_expr.clone())
 		);
 		assert_eq!(
 			eval_lambda(&format!("{{:: church }} succ ({n_expr})\n{defs}")),
-			(n + 1).to_string()
+			Ok((n + 1).to_string())
 		);
 	}
 }
@@ -127,15 +130,15 @@ fn test_plus() {
 			let sum_expr = make_church_num(n + m);
 			assert_eq!(
 				eval_lambda(&format!("+ ({n_expr}) ({m_expr})\n{defs}")),
-				sum_expr
+				Ok(sum_expr.clone())
 			);
 			assert_eq!(
 				eval_lambda(&format!("{{:: expr }} + ({n_expr}) ({m_expr})\n{defs}")),
-				sum_expr
+				Ok(sum_expr.clone())
 			);
 			assert_eq!(
 				eval_lambda(&format!("{{:: church }} + ({n_expr}) ({m_expr})\n{defs}")),
-				(n + m).to_string()
+				Ok((n + m).to_string())
 			);
 		}
 	}
@@ -151,12 +154,12 @@ fn test_tuple() {
 		.trim();
 
 	let evaluated = "\\a.a (\\b.\\c.b) (\\b.b (\\c.c c) (\\c.\\d.d)) (\\b.\\c.b (b c))";
-	assert_eq!(eval_lambda(e), evaluated);
+	assert_eq!(eval_lambda(e), Ok(evaluated.to_owned()));
 
 	let evaluated_as_tuple_exprs = "(\\b.\\c.b, \\b.b (\\c.c c) (\\c.\\d.d), \\b.\\c.b (b c))";
 	assert_eq!(
 		eval_lambda(&format!("{{:: tuple[expr, expr, expr] }}\n{e}")),
-		evaluated_as_tuple_exprs
+		Ok(evaluated_as_tuple_exprs.to_owned())
 	);
 
 	let evaluated_as_tuple = "(true, (\\c.c c, false), 2)";
@@ -164,7 +167,7 @@ fn test_tuple() {
 		eval_lambda(&format!(
 			"{{:: tuple[bool, tuple[expr, bool], church] }}\n{e}"
 		)),
-		evaluated_as_tuple
+		Ok(evaluated_as_tuple.to_owned())
 	);
 }
 
@@ -179,16 +182,16 @@ fn test_list_bool() {
 		.trim();
 
 	let evaluated = "\\a.a (\\b.\\c.b) (\\b.b (\\c.\\d.d) (\\c.c (\\d.\\e.e) (\\d.\\e.\\f.e)))";
-	assert_eq!(eval_lambda(e), evaluated);
+	assert_eq!(eval_lambda(e), Ok(evaluated.to_owned()));
 
 	let evaluated_as_list_expr = "[\\b.\\c.b, \\c.\\d.d, \\d.\\e.e]";
 	assert_eq!(
 		eval_lambda(&format!("{{:: list[expr] }}\n{e}")),
-		evaluated_as_list_expr
+		Ok(evaluated_as_list_expr.to_owned())
 	);
 
 	assert_eq!(
 		eval_lambda(&format!("{{:: list[bool] }}\n{e}")),
-		"[true, false, false]"
+		Ok("[true, false, false]".to_owned())
 	);
 }

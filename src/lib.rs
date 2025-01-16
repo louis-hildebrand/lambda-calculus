@@ -1,10 +1,12 @@
 pub mod debruijn;
 pub mod emit;
+pub mod error;
 pub mod eval;
 pub mod interpret_as;
 pub mod lex;
 pub mod parse;
 
+use crate::error::Error;
 use interpret_as::interpret_as;
 use wasm_bindgen::prelude::*;
 
@@ -20,21 +22,19 @@ pub fn set_panic_hook() {
 }
 
 #[wasm_bindgen]
-pub fn eval_lambda(src: &str) -> String {
+pub fn eval_lambda(src: &str) -> Result<String, Error> {
 	set_panic_hook();
 	// TODO: handle errors gracefully
-	let mut stream = lex::lex(src);
+	let mut stream = lex::lex(src)?;
 	stream.remove_comments();
 	let e = parse::parse(&mut stream);
 	let evaluated = e.to_debruijn().eval().to_named();
-	stream = lex::lex(src);
-	let datatype = parse::find_type_annotation(&mut stream).unwrap_or("expr".to_owned());
-	let out = match datatype.as_str().try_into() {
-		Ok(dt) => interpret_as(&evaluated, &dt),
-		Err(()) => Err(()),
-	};
+	stream = lex::lex(src)?;
+	let datatype_str = parse::find_type_annotation(&mut stream).unwrap_or("expr".to_owned());
+	let datatype = datatype_str.as_str().try_into()?;
+	let out = interpret_as(&evaluated, &datatype);
 	match out {
-		Ok(s) => s,
-		Err(()) => format!("Failed to interpret result as {datatype}."),
+		Ok(s) => Ok(s),
+		Err(()) => Err(Error::TypeError(datatype_str)),
 	}
 }

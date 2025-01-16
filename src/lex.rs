@@ -1,15 +1,33 @@
-use std::{collections::VecDeque, iter::Peekable, str::Chars};
+use crate::error::Error;
+use std::{collections::VecDeque, fmt::Display, iter::Peekable, str::Chars};
 
 #[derive(Debug, PartialEq)]
 pub enum TypeToken {
 	Expr,
 	Bool,
+	// TODO: rename these to "nat" or something, since the booleans are
+	//       apparently also referred to as Church booleans
 	Church,
 	Tuple,
 	List,
 	LeftSquareBracket,
 	RightSquareBracket,
 	Comma,
+}
+
+impl Display for TypeToken {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			TypeToken::Expr => write!(f, "expr"),
+			TypeToken::Bool => write!(f, "bool"),
+			TypeToken::Church => write!(f, "church"),
+			TypeToken::Tuple => write!(f, "tuple"),
+			TypeToken::List => write!(f, "list"),
+			TypeToken::LeftSquareBracket => write!(f, "["),
+			TypeToken::RightSquareBracket => write!(f, "]"),
+			TypeToken::Comma => write!(f, ","),
+		}
+	}
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -25,6 +43,7 @@ pub enum Token {
 	Comment(String),
 }
 
+#[derive(Debug, PartialEq)]
 pub struct TokenStream {
 	pub tokens: VecDeque<Token>,
 }
@@ -61,7 +80,7 @@ impl TokenStream {
 	}
 }
 
-pub fn lex_type(dt: &str) -> Vec<TypeToken> {
+pub fn lex_type(dt: &str) -> Result<Vec<TypeToken>, Error> {
 	let mut chars = dt.chars().peekable();
 	let mut tokens: Vec<TypeToken> = Vec::new();
 	while let Some(c) = chars.next() {
@@ -88,14 +107,22 @@ pub fn lex_type(dt: &str) -> Vec<TypeToken> {
 					"church" => TypeToken::Church,
 					"tuple" => TypeToken::Tuple,
 					"list" => TypeToken::List,
-					s => panic!("Invalid type identifier: {s}"),
+					s => {
+						return Err(Error::MalformedType(format!(
+							"invalid type identifier: \"{s}\""
+						)))
+					}
 				};
 				tokens.push(tok);
 			}
-			_ => panic!("Invalid character in type: {c}"),
+			c => {
+				return Err(Error::MalformedType(format!(
+					"invalid character in type: '{c}'"
+				)))
+			}
 		}
 	}
-	tokens
+	Ok(tokens)
 }
 
 const IDENT_SPECIAL_CHARS: [char; 25] = [
@@ -103,7 +130,7 @@ const IDENT_SPECIAL_CHARS: [char; 25] = [
 	'"', ',', '<', '>', '/', '?',
 ];
 
-pub fn lex(code: &str) -> TokenStream {
+pub fn lex(code: &str) -> Result<TokenStream, Error> {
 	let mut tokens = VecDeque::new();
 	let mut chars = code.chars().peekable();
 	while let Some(c) = chars.next() {
@@ -130,7 +157,7 @@ pub fn lex(code: &str) -> TokenStream {
 						Some('}') if n == 0 => break,
 						Some('}') => n -= 1,
 						Some('{') => n += 1,
-						None => panic!("Unclosed comment"),
+						None => return Err(Error::SyntaxError("unclosed comment".to_owned())),
 						_ => {}
 					}
 					s.push(c.unwrap());
@@ -146,13 +173,10 @@ pub fn lex(code: &str) -> TokenStream {
 				tokens.push_back(tok);
 			}
 			c if c.is_whitespace() => {}
-			c => {
-				// TODO: Handle errors better
-				panic!("Invalid char: '{}'", c);
-			}
+			c => return Err(Error::SyntaxError(format!("invalid character: '{c}'"))),
 		}
 	}
-	TokenStream { tokens: tokens }
+	Ok(TokenStream { tokens: tokens })
 }
 
 fn lex_ident(first: char, chars: &mut Peekable<Chars>) -> String {
@@ -170,7 +194,7 @@ fn lex_ident(first: char, chars: &mut Peekable<Chars>) -> String {
 }
 
 fn is_ident_char(c: &char) -> bool {
-	c.is_alphanumeric() || IDENT_SPECIAL_CHARS.contains(&c)
+	c.is_ascii_alphanumeric() || IDENT_SPECIAL_CHARS.contains(&c)
 }
 
 #[cfg(test)]
@@ -179,29 +203,29 @@ mod lex_type_tests {
 
 	#[test]
 	fn test_lex_expr() {
-		assert_eq!(lex_type("expr"), vec![TypeToken::Expr]);
+		assert_eq!(lex_type("expr"), Ok(vec![TypeToken::Expr]));
 	}
 
 	#[test]
 	fn test_lex_bool() {
-		assert_eq!(lex_type("bool"), vec![TypeToken::Bool]);
+		assert_eq!(lex_type("bool"), Ok(vec![TypeToken::Bool]));
 	}
 
 	#[test]
 	fn test_lex_church() {
-		assert_eq!(lex_type("church"), vec![TypeToken::Church]);
+		assert_eq!(lex_type("church"), Ok(vec![TypeToken::Church]));
 	}
 
 	#[test]
 	fn test_lex_1_tuple() {
 		assert_eq!(
 			lex_type("tuple[expr]"),
-			vec![
+			Ok(vec![
 				TypeToken::Tuple,
 				TypeToken::LeftSquareBracket,
 				TypeToken::Expr,
 				TypeToken::RightSquareBracket
-			]
+			])
 		);
 	}
 
@@ -209,14 +233,14 @@ mod lex_type_tests {
 	fn test_lex_2_tuple() {
 		assert_eq!(
 			lex_type("tuple [ bool , church ]"),
-			vec![
+			Ok(vec![
 				TypeToken::Tuple,
 				TypeToken::LeftSquareBracket,
 				TypeToken::Bool,
 				TypeToken::Comma,
 				TypeToken::Church,
 				TypeToken::RightSquareBracket
-			]
+			])
 		);
 	}
 
@@ -224,11 +248,11 @@ mod lex_type_tests {
 	fn test_lex_empty_tuple() {
 		assert_eq!(
 			lex_type("tuple[]"),
-			vec![
+			Ok(vec![
 				TypeToken::Tuple,
 				TypeToken::LeftSquareBracket,
 				TypeToken::RightSquareBracket
-			]
+			])
 		);
 	}
 
@@ -236,7 +260,7 @@ mod lex_type_tests {
 	fn test_lex_nested_tuple() {
 		assert_eq!(
 			lex_type("tuple[expr, tuple[bool, tuple[church]]]"),
-			vec![
+			Ok(vec![
 				TypeToken::Tuple,
 				TypeToken::LeftSquareBracket,
 				TypeToken::Expr,
@@ -251,7 +275,7 @@ mod lex_type_tests {
 				TypeToken::RightSquareBracket,
 				TypeToken::RightSquareBracket,
 				TypeToken::RightSquareBracket
-			]
+			])
 		);
 	}
 
@@ -259,25 +283,33 @@ mod lex_type_tests {
 	fn test_lex_list() {
 		assert_eq!(
 			lex_type("list[church]"),
-			vec![
+			Ok(vec![
 				TypeToken::List,
 				TypeToken::LeftSquareBracket,
 				TypeToken::Church,
 				TypeToken::RightSquareBracket
-			]
+			])
 		);
 	}
 
 	#[test]
-	#[should_panic(expected = "Invalid type identifier: boo")]
 	fn test_lex_invalid_type_identifier() {
-		lex_type("boo");
+		assert_eq!(
+			lex_type("boo"),
+			Err(Error::MalformedType(
+				"invalid type identifier: \"boo\"".to_owned()
+			))
+		);
 	}
 
 	#[test]
-	#[should_panic(expected = "Invalid character in type: (")]
 	fn test_lex_invalid_character() {
-		lex_type("bool()");
+		assert_eq!(
+			lex_type("bool()"),
+			Err(Error::MalformedType(
+				"invalid character in type: '('".to_owned()
+			))
+		);
 	}
 }
 
@@ -289,7 +321,7 @@ mod lex_tests {
 	fn lex_comment() -> () {
 		assert_eq!(
 			vec![Token::Comment(" Hello there! ".to_owned()), Token::Lambda],
-			lex(r#"{ Hello there! } \"#).all()
+			lex(r#"{ Hello there! } \"#).unwrap().all()
 		)
 	}
 
@@ -300,37 +332,49 @@ mod lex_tests {
 				Token::Comment(" Outside { Inside } Outside ".to_owned()),
 				Token::Lambda
 			],
-			lex(r#"{ Outside { Inside } Outside } \"#).all()
+			lex(r#"{ Outside { Inside } Outside } \"#).unwrap().all()
 		)
 	}
 
 	#[test]
-	#[should_panic(expected = "Unclosed comment")]
 	fn lex_unclosed_comment() -> () {
-		lex(r#"{ Hello there!"#);
+		assert_eq!(
+			lex(r#"{ Hello there!"#),
+			Err(Error::SyntaxError("unclosed comment".to_owned()))
+		);
 	}
 
 	#[test]
-	#[should_panic(expected = "Unclosed comment")]
 	fn lex_unclosed_nested_comment() -> () {
-		lex(r#"{ { Hello there! }"#);
+		assert_eq!(
+			lex(r#"{ { Hello there! }"#),
+			Err(Error::SyntaxError("unclosed comment".to_owned()))
+		);
+	}
+
+	#[test]
+	fn lex_invalid_char() -> () {
+		assert_eq!(
+			lex(r#"λx.x"#),
+			Err(Error::SyntaxError("invalid character: 'λ'".to_owned()))
+		)
 	}
 
 	#[test]
 	fn lex_lambda() -> () {
-		assert_eq!(vec![Token::Lambda], lex(r#"\"#).all());
+		assert_eq!(vec![Token::Lambda], lex(r#"\"#).unwrap().all());
 	}
 
 	#[test]
 	fn lex_simple_ident() -> () {
-		assert_eq!(vec![Token::Ident("a".to_owned())], lex("a").all());
+		assert_eq!(vec![Token::Ident("a".to_owned())], lex("a").unwrap().all());
 	}
 
 	#[test]
 	fn lex_long_ident() -> () {
 		assert_eq!(
 			vec![Token::Ident("aa".to_owned()), Token::Ident("bb".to_owned())],
-			lex("aa bb").all()
+			lex("aa bb").unwrap().all()
 		);
 	}
 
@@ -368,33 +412,33 @@ mod lex_tests {
 				Token::Ident("??".to_owned()),
 				Token::Dot,
 			],
-			lex("ab CD 12 ~~ `` !! @@ ## $$ %% ^^ && ** -- __ ++ [[ ]] || :: ;; '' \"\" ,, << >> // ?? .").all(),
+			lex("ab CD 12 ~~ `` !! @@ ## $$ %% ^^ && ** -- __ ++ [[ ]] || :: ;; '' \"\" ,, << >> // ?? .").unwrap().all(),
 		);
 	}
 
 	#[test]
 	fn lex_dot() -> () {
-		assert_eq!(vec![Token::Dot], lex(".").all());
+		assert_eq!(vec![Token::Dot], lex(".").unwrap().all());
 	}
 
 	#[test]
 	fn lex_lpar() -> () {
-		assert_eq!(vec![Token::Lpar], lex("(").all());
+		assert_eq!(vec![Token::Lpar], lex("(").unwrap().all());
 	}
 
 	#[test]
 	fn lex_rpar() -> () {
-		assert_eq!(vec![Token::Rpar], lex(")").all());
+		assert_eq!(vec![Token::Rpar], lex(")").unwrap().all());
 	}
 
 	#[test]
 	fn lex_where() -> () {
-		assert_eq!(vec![Token::Where], lex("where").all());
+		assert_eq!(vec![Token::Where], lex("where").unwrap().all());
 	}
 
 	#[test]
 	fn lex_def() -> () {
-		assert_eq!(vec![Token::Def], lex("=").all());
+		assert_eq!(vec![Token::Def], lex("=").unwrap().all());
 	}
 
 	#[test]
@@ -406,7 +450,7 @@ mod lex_tests {
 				Token::Dot,
 				Token::Ident("x".to_owned()),
 			],
-			lex(r#"\x.x"#).all()
+			lex(r#"\x.x"#).unwrap().all()
 		)
 	}
 
@@ -422,7 +466,7 @@ mod lex_tests {
 				Token::Dot,
 				Token::Ident("z".to_owned()),
 			],
-			lex(r#"\s.\z.z"#).all()
+			lex(r#"\s.\z.z"#).unwrap().all()
 		)
 	}
 
@@ -441,7 +485,7 @@ mod lex_tests {
 				Token::Ident("z".to_owned()),
 				Token::Rpar
 			],
-			lex(r#"\s.\z.s(z)"#).all()
+			lex(r#"\s.\z.s(z)"#).unwrap().all()
 		)
 	}
 
@@ -463,7 +507,7 @@ mod lex_tests {
 				Token::Rpar,
 				Token::Rpar,
 			],
-			lex(r#"\s.\z.s(s(z))"#).all()
+			lex(r#"\s.\z.s(s(z))"#).unwrap().all()
 		)
 	}
 
@@ -483,7 +527,7 @@ mod lex_tests {
 				Token::Ident("b".to_owned()),
 				Token::Rpar,
 			],
-			lex("\\a.\\b.\n\ta (a b)").all()
+			lex("\\a.\\b.\n\ta (a b)").unwrap().all()
 		);
 	}
 	#[test]
@@ -507,7 +551,7 @@ mod lex_tests {
 				Token::Dot,
 				Token::Ident("a".to_owned())
 			],
-			lex(r#"f x where f = \z.z where x = \a.a"#).all()
+			lex(r#"f x where f = \z.z where x = \a.a"#).unwrap().all()
 		);
 	}
 }
