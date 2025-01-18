@@ -1,0 +1,12 @@
+{:: tuple[church, church, church, church] }
+{ Expected output: (0, 6, 4, 5) }
+\s.s (if F 6 0) (if T 6 0) (if (&& T F) 5 4) (if (|| T F) 5 4)
+where if = \c.\t.\f.c t f
+where && = \a.\b.a b F
+where || = \a.\b.a T b
+where  T = \t.\f.t
+where  F = \t.\f.f
+where  0 = \s.\z.z
+where  4 = \s.\z.s(s(s(s(z))))
+where  5 = \s.\z.s(s(s(s(s(z)))))
+where  6 = \s.\z.s(s(s(s(s(s(z))))))
