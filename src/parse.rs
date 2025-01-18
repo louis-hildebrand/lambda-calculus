@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::error::Error;
 use crate::lex::{Token, TokenStream};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -21,102 +22,149 @@ pub fn find_type_annotation(tokens: &mut TokenStream) -> Option<String> {
 	}
 }
 
-pub fn parse(tokens: &mut TokenStream) -> Box<Expr> {
-	let e = parse_e(tokens);
-	let decls = parse_decls(tokens);
+pub fn parse(tokens: &mut TokenStream) -> Result<Box<Expr>, Error> {
+	let e = parse_e(tokens)?;
+	let decls = parse_decls(tokens)?;
 	let ee = inline_decls(&e, &decls);
 	match tokens.next() {
 		Token::End => (),
-		t => panic!("Unexpected trailing token {t:?}"),
+		t => {
+			return Err(Error::SyntaxError(format!(
+				"unexpected trailing token \"{t}\""
+			)))
+		}
 	};
-	ee
+	Ok(ee)
 }
 
-fn parse_e(tokens: &mut TokenStream) -> Box<Expr> {
-	let mut e = parse_eprime(tokens);
+fn parse_e(tokens: &mut TokenStream) -> Result<Box<Expr>, Error> {
+	let mut e = parse_eprime(tokens)?;
 	loop {
 		match tokens.peek() {
 			Token::Lambda | Token::Ident(_) | Token::Lpar => {
-				e = Box::new(Expr::App(e, parse_eprime(tokens)))
+				e = Box::new(Expr::App(e, parse_eprime(tokens)?))
 			}
 			_ => break,
 		}
 	}
-	e
+	Ok(e)
 }
 
-fn parse_eprime(tokens: &mut TokenStream) -> Box<Expr> {
+fn parse_eprime(tokens: &mut TokenStream) -> Result<Box<Expr>, Error> {
 	match tokens.peek() {
 		Token::Lambda => parse_fun(tokens),
 		Token::Ident(_) => parse_var(tokens),
 		Token::Lpar => parse_parenthesized(tokens),
-		t => panic!("Unexpected token {t:?}"),
+		t => return Err(Error::SyntaxError(format!("unexpected token \"{t}\""))),
 	}
 }
 
-fn parse_fun(tokens: &mut TokenStream) -> Box<Expr> {
+fn parse_fun(tokens: &mut TokenStream) -> Result<Box<Expr>, Error> {
 	match tokens.next() {
 		Token::Lambda => (),
-		t => panic!("Expected {:?} but got {:?}", Token::Lambda, t),
+		t => {
+			return Err(Error::SyntaxError(format!(
+				"expected \"{}\" but got \"{t}\"",
+				Token::Lambda
+			)))
+		}
 	};
 	let x = match tokens.next() {
 		Token::Ident(name) => name,
-		t => panic!("Expected an identifier but got {t:?}"),
+		t => {
+			return Err(Error::SyntaxError(format!(
+				"expected an identifier but got \"{t}\""
+			)))
+		}
 	};
 	match tokens.next() {
 		Token::Dot => (),
-		t => panic!("Expected {:?} but got {:?}", Token::Dot, t),
+		t => {
+			return Err(Error::SyntaxError(format!(
+				"expected \"{}\" but got \"{t}\"",
+				Token::Dot
+			)))
+		}
 	};
-	let e = parse_e(tokens);
-	Box::new(Expr::Fun(x, e))
+	let e = parse_e(tokens)?;
+	Ok(Box::new(Expr::Fun(x, e)))
 }
 
-fn parse_var(tokens: &mut TokenStream) -> Box<Expr> {
+fn parse_var(tokens: &mut TokenStream) -> Result<Box<Expr>, Error> {
 	match tokens.next() {
-		Token::Ident(name) => Box::new(Expr::Var(name)),
-		t => panic!("Expected an identifier but got {t:?}"),
+		Token::Ident(name) => Ok(Box::new(Expr::Var(name))),
+		t => {
+			return Err(Error::SyntaxError(format!(
+				"expected an identifier but got \"{t}\""
+			)))
+		}
 	}
 }
 
-fn parse_parenthesized(tokens: &mut TokenStream) -> Box<Expr> {
+fn parse_parenthesized(tokens: &mut TokenStream) -> Result<Box<Expr>, Error> {
 	match tokens.next() {
 		Token::Lpar => (),
-		t => panic!("Expected ( but got {t:?}"),
+		t => {
+			return Err(Error::SyntaxError(format!(
+				"expected \"{}\" but got \"{t}\"",
+				Token::Lpar
+			)))
+		}
 	}
 	let e = parse_e(tokens);
 	match tokens.next() {
 		Token::Rpar => (),
-		t => panic!("Expected ) but got {t:?}"),
+		Token::End => return Err(Error::SyntaxError("unclosed parenthesis".to_owned())),
+		t => {
+			return Err(Error::SyntaxError(format!(
+				"expected \"{}\" but got \"{t}\"",
+				Token::Rpar
+			)))
+		}
 	}
 	e
 }
 
-fn parse_decls(tokens: &mut TokenStream) -> Vec<(String, Box<Expr>)> {
+fn parse_decls(tokens: &mut TokenStream) -> Result<Vec<(String, Box<Expr>)>, Error> {
 	let mut decls = Vec::new();
 	loop {
 		match tokens.peek() {
-			Token::Where => decls.push(parse_decl(tokens)),
+			Token::Where => decls.push(parse_decl(tokens)?),
 			_ => break,
 		}
 	}
-	decls
+	Ok(decls)
 }
 
-fn parse_decl(tokens: &mut TokenStream) -> (String, Box<Expr>) {
+fn parse_decl(tokens: &mut TokenStream) -> Result<(String, Box<Expr>), Error> {
 	match tokens.next() {
 		Token::Where => (),
-		t => panic!("Expected 'where' but got {t:?}"),
+		t => {
+			return Err(Error::SyntaxError(format!(
+				"expected \"{}\" but got \"{t}\"",
+				Token::Where
+			)))
+		}
 	};
 	let x = match tokens.next() {
 		Token::Ident(name) => name,
-		t => panic!("Expected an identifier but got {t:?}"),
+		t => {
+			return Err(Error::SyntaxError(format!(
+				"expected an identifier but got \"{t}\""
+			)))
+		}
 	};
 	match tokens.next() {
 		Token::Def => (),
-		t => panic!("Expected = but got {t:?}"),
+		t => {
+			return Err(Error::SyntaxError(format!(
+				"expected \"{}\" but got \"{t}\"",
+				Token::Def
+			)))
+		}
 	};
-	let e = parse_e(tokens);
-	(x, e)
+	let e = parse_e(tokens)?;
+	Ok((x, e))
 }
 
 fn inline_decls(e: &Expr, decls: &[(String, Box<Expr>)]) -> Box<Expr> {
@@ -159,18 +207,18 @@ fn inline(e: &Expr, decls: &HashMap<&String, Box<Expr>>) -> Box<Expr> {
 			(true, Expr::Fun(x, _)) => {
 				match arg_stack.pop() {
 					Some(_) => (),
-					None => panic!("Missing argument"),
+					None => panic!("missing argument"),
 				};
 				let body = match result_stack.pop() {
 					Some(e) => e,
-					None => panic!("Missing result for function abstraction"),
+					None => panic!("missing result for function abstraction"),
 				};
 				result_stack.push(Box::new(Expr::Fun(x.clone(), body)));
 			}
 			(true, Expr::App(_, _)) => {
 				let (e1, e2) = match (result_stack.pop(), result_stack.pop()) {
 					(Some(e2), Some(e1)) => (e1, e2),
-					_ => panic!("Missing result for function application"),
+					_ => panic!("missing result for function application"),
 				};
 				result_stack.push(Box::new(Expr::App(e1, e2)));
 			}
@@ -198,7 +246,7 @@ mod parse_tests {
 			Token::Ident("x".to_owned()),
 		]);
 		let mut stm = TokenStream { tokens };
-		assert_eq!(f, parse(&mut stm));
+		assert_eq!(Ok(f), parse(&mut stm));
 	}
 
 	#[test]
@@ -221,7 +269,7 @@ mod parse_tests {
 			Token::Ident("z".to_owned()),
 		]);
 		let mut stm = TokenStream { tokens };
-		assert_eq!(f, parse(&mut stm));
+		assert_eq!(Ok(f), parse(&mut stm));
 	}
 
 	#[test]
@@ -250,7 +298,7 @@ mod parse_tests {
 			Token::Rpar,
 		]);
 		let mut stm = TokenStream { tokens };
-		assert_eq!(f, parse(&mut stm));
+		assert_eq!(Ok(f), parse(&mut stm));
 	}
 
 	#[test]
@@ -285,12 +333,12 @@ mod parse_tests {
 			Token::Rpar,
 		]);
 		let mut stm = TokenStream { tokens };
-		assert_eq!(f, parse(&mut stm));
+		assert_eq!(Ok(f), parse(&mut stm));
 	}
 
 	#[test]
 	fn parse_abc() -> () {
-		// \a.\b.\c.abc
+		// \a.\b.\c.a b c
 		// (To make sure associativity is working properly)
 		let f = Box::new(Expr::Fun(
 			"a".to_owned(),
@@ -323,11 +371,10 @@ mod parse_tests {
 			Token::Ident("c".to_owned()),
 		]);
 		let mut stm = TokenStream { tokens };
-		assert_eq!(f, parse(&mut stm));
+		assert_eq!(Ok(f), parse(&mut stm));
 	}
 
 	#[test]
-	#[should_panic(expected = "Unexpected trailing token Rpar")]
 	fn parse_too_many_rparens() -> () {
 		// (x))
 		let tokens = VecDeque::from(vec![
@@ -337,7 +384,28 @@ mod parse_tests {
 			Token::Rpar,
 		]);
 		let mut stm = TokenStream { tokens };
-		parse(&mut stm);
+		assert_eq!(
+			Err(Error::SyntaxError(
+				"unexpected trailing token \")\"".to_owned()
+			)),
+			parse(&mut stm)
+		);
+	}
+
+	#[test]
+	fn parse_unclosed_lparen() -> () {
+		// ((x)
+		let tokens = VecDeque::from(vec![
+			Token::Lpar,
+			Token::Lpar,
+			Token::Ident("x".to_owned()),
+			Token::Rpar,
+		]);
+		let mut stm = TokenStream { tokens };
+		assert_eq!(
+			Err(Error::SyntaxError("unclosed parenthesis".to_owned())),
+			parse(&mut stm)
+		);
 	}
 
 	#[test]
@@ -398,6 +466,6 @@ mod parse_tests {
 			Token::Ident("z".to_owned()),
 		]);
 		let mut stm = TokenStream { tokens };
-		assert_eq!(e, parse(&mut stm));
+		assert_eq!(Ok(e), parse(&mut stm));
 	}
 }

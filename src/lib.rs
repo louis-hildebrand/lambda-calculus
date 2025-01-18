@@ -27,7 +27,7 @@ pub fn eval_lambda(src: &str) -> Result<String, Error> {
 	// TODO: handle errors gracefully
 	let mut stream = lex::lex(src)?;
 	stream.remove_comments();
-	let e = parse::parse(&mut stream);
+	let e = parse::parse(&mut stream)?;
 	let evaluated = e.to_debruijn().eval().to_named();
 	stream = lex::lex(src)?;
 	let datatype_str = parse::find_type_annotation(&mut stream).unwrap_or("expr".to_owned());

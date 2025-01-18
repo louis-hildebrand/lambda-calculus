@@ -43,6 +43,22 @@ pub enum Token {
 	Comment(String),
 }
 
+impl Display for Token {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			Token::Lambda => write!(f, "\\"),
+			Token::Ident(s) => write!(f, "{s}"),
+			Token::Dot => write!(f, "."),
+			Token::Lpar => write!(f, "("),
+			Token::Rpar => write!(f, ")"),
+			Token::Where => write!(f, "where"),
+			Token::Def => write!(f, "="),
+			Token::End => write!(f, "<END>"),
+			Token::Comment(s) => write!(f, "{{{s}}}"),
+		}
+	}
+}
+
 #[derive(Debug, PartialEq)]
 pub struct TokenStream {
 	pub tokens: VecDeque<Token>,

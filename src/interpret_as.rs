@@ -402,8 +402,8 @@ mod interpret_as_tests {
 	use crate::parse::Expr;
 
 	fn parse(e: &str) -> Box<Expr> {
-		let mut stream = lex::lex(e).unwrap(); // TODO
-		parse::parse(&mut stream)
+		let mut stream = lex::lex(e).unwrap();
+		parse::parse(&mut stream).unwrap()
 	}
 
 	#[test]
