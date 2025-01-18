@@ -24,7 +24,6 @@ pub fn set_panic_hook() {
 #[wasm_bindgen]
 pub fn eval_lambda(src: &str) -> Result<String, Error> {
 	set_panic_hook();
-	// TODO: handle errors gracefully
 	let mut stream = lex::lex(src)?;
 	stream.remove_comments();
 	let e = parse::parse(&mut stream)?;

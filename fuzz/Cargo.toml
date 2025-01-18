@@ -1,0 +1,29 @@
+[package]
+name = "lambda-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.lambda]
+path = ".."
+features = ["arbitrary"]
+
+[[bin]]
+name = "parse_without_panic"
+path = "fuzz_targets/parse_without_panic.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "parse_valid"
+path = "fuzz_targets/parse_valid.rs"
+test = false
+doc = false
+bench = false

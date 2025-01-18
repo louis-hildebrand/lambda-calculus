@@ -4,6 +4,7 @@ use crate::error::Error;
 use crate::lex::{Token, TokenStream};
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub enum Expr {
 	Fun(String, Box<Expr>),
 	App(Box<Expr>, Box<Expr>),

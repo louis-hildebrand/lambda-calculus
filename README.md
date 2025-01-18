@@ -30,6 +30,28 @@ where succ = \n.\s.\z.s(n s z)
 { RESULT: \s.\z.s(s(s(s(s(s(z))))))  (i.e., 6) }
 ```
 
+## Development
+
+## Requirements
+
+- rustup and cargo (https://www.rust-lang.org/tools/install)
+- wasm-pack (https://rustwasm.github.io/wasm-pack/installer/)
+- npm (https://docs.npmjs.com/downloading-and-installing-node-js-and-npm)
+
+In addition, to run the fuzzer, you need the nightly Rust compiler and cargo-fuzz, as described here: https://rust-fuzz.github.io/book/cargo-fuzz/setup.html.
+
+## Running the Tests
+
+- Unit tests: `cargo test`
+- Integration tests: `wasm-pack test --firefox --headless`
+
+## Running the Fuzzer
+
+```sh
+cargo fuzz list               # List available targets
+cargo fuzz run <TARGET NAME>  # Run the fuzzer
+```
+
 ## Running on localhost
 
 Starting in the root of the repository, run the following commands (without the dollar signs).
